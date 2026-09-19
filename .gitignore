@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Agent skills (reinstall with npx skills; keep .cursor/rules in git)
+.agents/
+skills-lock.json
+
+# Local editor workspace
+*.code-workspace

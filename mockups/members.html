@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="club">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Members · Cloud Computing Country Club</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="club.css" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-base-200">
+    <div class="navbar bg-neutral text-neutral-content border-b-4 border-primary">
+      <div class="navbar-start">
+        <a href="times.html" class="text-lg sm:text-2xl">Cloud Computing Country Club</a>
+      </div>
+      <div class="navbar-end">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="times.html">Tee Times</a></li>
+          <li class="menu-active"><a href="members.html">Members</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 class="text-3xl">Members</h1>
+        <label for="add-member-modal" class="btn btn-sm btn-outline">Add member</label>
+      </div>
+
+      <div class="slot-pages">
+        <input type="radio" name="mem-page" id="mem-p1" value="1" class="slot-page-radio" checked />
+        <input type="radio" name="mem-page" id="mem-p2" value="2" class="slot-page-radio" />
+        <div class="page" data-page="1">
+          <ul class="list bg-base-100 rounded-box">
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">William Hargrove</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 332-1044</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Margaret Ashford</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 867-2210</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Charles Beaumont</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 691-4482</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Eleanor Whitfield</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 258-7731</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Thomas Langley</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 821-0095</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">James Whitaker</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 974-3360</div>
+            </li>
+          </ul>
+        </div>
+        <div class="page" data-page="2">
+          <ul class="list bg-base-100 rounded-box">
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Helen Cho</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 419-8827</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Robert Vance</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 635-1108</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Priya Shah</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 746-2294</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Arthur Quinn</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 882-5401</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Diana Cole</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 201-6673</div>
+            </li>
+            <li class="list-row items-center">
+              <div class="list-col-grow min-w-0 truncate">Frank Moretti</div>
+              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 317-0946</div>
+            </li>
+          </ul>
+        </div>
+        <div class="flex justify-end mt-4">
+          <div class="join lg:join-horizontal">
+            <label for="mem-p1" class="btn btn-sm join-item" data-page="1">1</label>
+            <label for="mem-p2" class="btn btn-sm join-item" data-page="2">2</label>
+          </div>
+        </div>
+      </div>
+
+      <input type="checkbox" id="add-member-modal" class="modal-toggle" />
+      <div class="modal" role="dialog">
+        <div class="modal-box">
+          <h2 class="text-2xl">Add member</h2>
+          <fieldset class="fieldset mt-4">
+            <legend class="fieldset-legend">Name</legend>
+            <input type="text" class="input w-full" placeholder="Full name" aria-label="Full name" />
+          </fieldset>
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Phone</legend>
+            <input type="tel" class="input w-full" placeholder="(610) 555-0100" aria-label="Phone" />
+          </fieldset>
+          <div class="modal-action">
+            <label for="add-member-modal" class="btn">Cancel</label>
+            <button type="button" class="btn btn-primary">Add member</button>
+          </div>
+        </div>
+        <label class="modal-backdrop" for="add-member-modal">Close</label>
+      </div>
+    </main>
+
+    <footer class="footer sm:footer-horizontal bg-neutral text-neutral-content p-4">
+      <aside>
+        <p>Cloud Computing Country Club · Est. 1924</p>
+      </aside>
+    </footer>
+  </body>
+</html>

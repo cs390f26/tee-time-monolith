@@ -1,0 +1,96 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap");
+
+[data-theme="club"] {
+  color-scheme: light;
+  --color-base-100: #f7f3ea;
+  --color-base-200: #efe8d8;
+  --color-base-300: #e0d5c0;
+  --color-base-content: #1a3a2a;
+  --color-primary: #c9a227;
+  --color-primary-content: #1a3a2a;
+  --color-secondary: #2d5a3d;
+  --color-secondary-content: #f7f3ea;
+  --color-accent: #d4af37;
+  --color-accent-content: #1a3a2a;
+  --color-neutral: #1a3a2a;
+  --color-neutral-content: #f7f3ea;
+  --color-info: #4a7c8c;
+  --color-info-content: #f7f3ea;
+  --color-success: #2d5a3d;
+  --color-success-content: #f7f3ea;
+  --color-warning: #c9a227;
+  --color-warning-content: #1a3a2a;
+  --color-error: #8c3a32;
+  --color-error-content: #f7f3ea;
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+body {
+  font-family: "Source Sans 3", ui-sans-serif, sans-serif;
+}
+
+.navbar-start a,
+h1,
+h2,
+.card-title {
+  font-family: "Cormorant Garamond", ui-serif, Georgia, serif;
+  font-weight: 700;
+}
+
+.slot-time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-tabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.week-tabs > .tab {
+  width: auto;
+  justify-content: center;
+  text-align: center;
+}
+
+.week-tabs > .tab-content {
+  grid-column: 1 / -1;
+}
+
+.slot-pages {
+  position: relative;
+}
+
+.slot-page-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.slot-pages > .page {
+  display: none;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.slot-pages:has(input[value="1"]:checked) > .page[data-page="1"],
+.slot-pages:has(input[value="2"]:checked) > .page[data-page="2"],
+.slot-pages:has(input[value="3"]:checked) > .page[data-page="3"] {
+  display: flex;
+}
+
+.slot-pages:has(input[value="1"]:checked) label[data-page="1"],
+.slot-pages:has(input[value="2"]:checked) label[data-page="2"],
+.slot-pages:has(input[value="3"]:checked) label[data-page="3"] {
+  background-color: var(--color-base-300);
+  border-color: var(--color-base-300);
+}

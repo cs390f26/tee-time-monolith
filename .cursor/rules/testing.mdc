@@ -1,0 +1,17 @@
+---
+description: Unit tests (moto) vs Playwright acceptance tests, matching voting_monolith
+globs: tests/**/*.py,tests_ui/**/*.py
+alwaysApply: false
+---
+
+# Testing
+
+`pytest.ini`: `testpaths = tests` so bare `pytest` is unit tests only. `pythonpath = tests` so UI tests can import shared sample data from `tests/`.
+
+## Unit (`tests/`)
+
+Use **moto** (`mock_aws`), not DynamoDB Local. Fixtures in `tests/conftest.py`: fake AWS env → create table inside moto → storage object. API tests: `create_app(TeeTimeApp(store)).test_client()`. Cover health (200 vs 503), listing tee times, listing/adding members, empty lists, validation 400s, missing ids 404s.
+
+## Acceptance (`tests_ui/`)
+
+Playwright against the **already running** app at `http://127.0.0.1:5000`. Do not start Flask or Local from pytest. On session start, hit `/health` and `pytest.exit` if it is not 200. Use a real storage client from `.env`; fixtures `clear_all()` then seed. Drive the times page and the members page (view + add). Run: Local up, table created, `python -m tee_time.app`, then `pytest tests_ui`.

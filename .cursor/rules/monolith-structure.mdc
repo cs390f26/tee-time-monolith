@@ -1,0 +1,31 @@
+---
+description: Tee-time monolith layout, stack, and how to run (mirror voting_monolith)
+alwaysApply: true
+---
+
+# Tee-time monolith structure
+
+This is a **basic country club tee-time site**, not a full booking or payments product. Keep the UI to a couple of pages:
+
+- **Available times** — list tee times members can see.
+- **Members** — view the member list and add a new member.
+
+Do not add extra features (auth, payments, waitlists, multi-course calendars) unless asked. Follow **voting_monolith** for how the app is built and run: Flask (HTTP API + browser UI) and DynamoDB on one machine. Do **not** add a React/Vite/Node frontend.
+
+Python package: `src/tee_time/` (import as `tee_time`). Editable install via `setup.py` with `package_dir={"": "src"}`.
+
+```
+src/tee_time/          # Flask app, business logic, DB, templates, static CSS
+tests/                 # Unit tests (moto fake DynamoDB; no Local required)
+tests_ui/              # Playwright; needs Local + Flask already running
+scripts/               # create_table.py, delete_table.py, seed.py, wait_for_dynamodb.py
+config/example.env     # Copy to .env (gitignored)
+data/sample-data.json
+docs/                  # development.md, design.md, deploy-*
+deploy/                # systemd units, CloudFormation, userdata
+setup.py, requirements.txt, pytest.ini
+```
+
+**Run locally** (venv active): `pip install -r requirements.txt && pip install -e .` → copy `.env` → start DynamoDB Local in `db/` on port 8000 → `python scripts/create_table.py` → `python -m tee_time.app` → http://127.0.0.1:5000/
+
+Unit tests: `pytest`. Lint: `ruff check src tests scripts tests_ui`. UI tests: `pytest tests_ui` only after Local, table, and Flask are up. Stack: Python 3.12+, Flask, boto3, DynamoDB Local (Java 17+), gunicorn for deploy.

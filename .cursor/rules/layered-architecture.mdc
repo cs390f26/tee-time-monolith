@@ -1,0 +1,17 @@
+---
+description: Three-layer Flask design (API, application, DB) copied from voting_monolith
+globs: src/**/*.py
+alwaysApply: false
+---
+
+# Layers
+
+HTTP, business rules, and DynamoDB are separate. Each layer has its own exceptions; the API must not import boto3, and the application must not parse Flask requests.
+
+1. **API** (`app.py`) — parse HTTP, call the application, return JSON or HTML. One template for available tee times, one for viewing/adding members. CSS in `static/`. Pages fetch JSON from the same Flask process. `create_app(app_logic)` for tests; `launch()` wires settings → storage → app → Flask. `python -m tee_time.app` runs port 5000. Include `GET /health`.
+2. **Application** (`tee_time.py` or similar) — validate input, workflows, domain errors (`ValidationError`, `NotFoundError`, `ServiceUnavailableError`). Wrap DB failures so the API never imports `tee_time.db`.
+3. **DB** (`db.py`) — boto3 only. Map DynamoDB items to domain dataclasses and back. Translate `ClientError` / `BotoCoreError` into storage exceptions.
+
+**Types:** frozen dataclasses for tee times and members (DB row vs what a page shows). Convert at layer boundaries; do not pass raw DynamoDB dicts into templates or JSON helpers.
+
+**Settings:** `settings.py` + `python-dotenv`. `ensure_settings()` requires AWS keys, region, table name, and `DYNAMODB_ENDPOINT_URL` (Local: `http://localhost:8000`).
