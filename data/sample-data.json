@@ -1,0 +1,968 @@
+[
+  {
+    "itemId": "MEMBER#a1b2c3d4",
+    "itemType": "member",
+    "name": "William Hargrove",
+    "phone": "(610) 332-1044"
+  },
+  {
+    "itemId": "MEMBER#e5f6g7h8",
+    "itemType": "member",
+    "name": "Margaret Ashford",
+    "phone": "(610) 867-2210"
+  },
+  {
+    "itemId": "MEMBER#c4e91a26",
+    "itemType": "member",
+    "name": "Charles Beaumont",
+    "phone": "(610) 691-4482"
+  },
+  {
+    "itemId": "MEMBER#d5f02b37",
+    "itemType": "member",
+    "name": "Eleanor Whitfield",
+    "phone": "(610) 258-7731"
+  },
+  {
+    "itemId": "MEMBER#e6013c48",
+    "itemType": "member",
+    "name": "Thomas Langley",
+    "phone": "(484) 821-0095"
+  },
+  {
+    "itemId": "MEMBER#f7124d59",
+    "itemType": "member",
+    "name": "James Whitaker",
+    "phone": "(610) 974-3360"
+  },
+  {
+    "itemId": "MEMBER#08235e6a",
+    "itemType": "member",
+    "name": "Helen Cho",
+    "phone": "(610) 419-8827"
+  },
+  {
+    "itemId": "MEMBER#19346f7b",
+    "itemType": "member",
+    "name": "Robert Vance",
+    "phone": "(484) 635-1108"
+  },
+  {
+    "itemId": "MEMBER#2a45708c",
+    "itemType": "member",
+    "name": "Priya Shah",
+    "phone": "(610) 746-2294"
+  },
+  {
+    "itemId": "MEMBER#3b56819d",
+    "itemType": "member",
+    "name": "Arthur Quinn",
+    "phone": "(610) 882-5401"
+  },
+  {
+    "itemId": "MEMBER#4c6792ae",
+    "itemType": "member",
+    "name": "Diana Cole",
+    "phone": "(484) 201-6673"
+  },
+  {
+    "itemId": "MEMBER#5d78a3bf",
+    "itemType": "member",
+    "name": "Frank Moretti",
+    "phone": "(610) 317-0946"
+  },
+  {
+    "itemId": "SLOT#2026-09-14#08:00",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "08:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-14#08:10",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "08:10",
+    "players": {
+      "1": {
+        "memberId": "e6013c48",
+        "name": "Thomas Langley"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-14#08:20",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "08:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-14#08:30",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "08:30",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-14#09:00",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "09:00",
+    "players": {
+      "1": {
+        "memberId": "08235e6a",
+        "name": "Helen Cho"
+      },
+      "2": {
+        "memberId": "3b56819d",
+        "name": "Arthur Quinn"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-14#09:10",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "09:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-14#10:00",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "10:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-14#11:00",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "11:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-14#13:00",
+    "itemType": "teeTime",
+    "date": "2026-09-14",
+    "time": "13:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-15#07:00",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "07:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-15#07:10",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "07:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-15#07:20",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "07:20",
+    "players": {
+      "1": {
+        "memberId": "f7124d59",
+        "name": "James Whitaker"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-15#07:30",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "07:30",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-15#08:00",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "08:00",
+    "players": {
+      "1": {
+        "memberId": "2a45708c",
+        "name": "Priya Shah"
+      },
+      "2": {
+        "memberId": "19346f7b",
+        "name": "Robert Vance"
+      },
+      "3": {
+        "memberId": "4c6792ae",
+        "name": "Diana Cole"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-15#08:10",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "08:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-15#08:20",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "08:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-15#09:00",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "09:00",
+    "players": {
+      "1": {
+        "memberId": "d5f02b37",
+        "name": "Eleanor Whitfield"
+      },
+      "2": {
+        "memberId": "e6013c48",
+        "name": "Thomas Langley"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-15#10:00",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "10:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-15#11:00",
+    "itemType": "teeTime",
+    "date": "2026-09-15",
+    "time": "11:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-16#07:00",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "07:00",
+    "players": {
+      "1": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      },
+      "2": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      },
+      "3": {
+        "memberId": "c4e91a26",
+        "name": "Charles Beaumont"
+      },
+      "4": {
+        "memberId": "d5f02b37",
+        "name": "Eleanor Whitfield"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-16#07:10",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "07:10",
+    "players": {
+      "1": {
+        "memberId": "f7124d59",
+        "name": "James Whitaker"
+      },
+      "2": {
+        "memberId": "08235e6a",
+        "name": "Helen Cho"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-16#07:20",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "07:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-16#07:30",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "07:30",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-16#08:00",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "08:00",
+    "players": {
+      "1": {
+        "memberId": "5d78a3bf",
+        "name": "Frank Moretti"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-16#08:10",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "08:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-16#08:20",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "08:20",
+    "players": {
+      "1": {
+        "memberId": "3b56819d",
+        "name": "Arthur Quinn"
+      },
+      "2": {
+        "memberId": "4c6792ae",
+        "name": "Diana Cole"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-16#09:00",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "09:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-16#10:00",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "10:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-16#12:00",
+    "itemType": "teeTime",
+    "date": "2026-09-16",
+    "time": "12:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-17#07:00",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "07:00",
+    "players": {
+      "1": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      },
+      "2": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-17#07:10",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "07:10",
+    "players": {
+      "1": {
+        "memberId": "c4e91a26",
+        "name": "Charles Beaumont"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-17#07:20",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "07:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-17#07:30",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "07:30",
+    "players": {
+      "1": {
+        "memberId": "2a45708c",
+        "name": "Priya Shah"
+      },
+      "2": {
+        "memberId": "19346f7b",
+        "name": "Robert Vance"
+      },
+      "3": {
+        "memberId": "08235e6a",
+        "name": "Helen Cho"
+      },
+      "4": {
+        "memberId": "f7124d59",
+        "name": "James Whitaker"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-17#08:00",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "08:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-17#08:10",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "08:10",
+    "players": {
+      "1": {
+        "memberId": "3b56819d",
+        "name": "Arthur Quinn"
+      },
+      "2": {
+        "memberId": "e6013c48",
+        "name": "Thomas Langley"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-17#08:20",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "08:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-17#09:00",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "09:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-17#10:00",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "10:00",
+    "players": {
+      "1": {
+        "memberId": "5d78a3bf",
+        "name": "Frank Moretti"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-17#14:00",
+    "itemType": "teeTime",
+    "date": "2026-09-17",
+    "time": "14:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-18#07:00",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "07:00",
+    "players": {
+      "1": {
+        "memberId": "c4e91a26",
+        "name": "Charles Beaumont"
+      },
+      "2": {
+        "memberId": "d5f02b37",
+        "name": "Eleanor Whitfield"
+      },
+      "3": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      },
+      "4": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-18#07:10",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "07:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-18#07:20",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "07:20",
+    "players": {
+      "1": {
+        "memberId": "e6013c48",
+        "name": "Thomas Langley"
+      },
+      "2": {
+        "memberId": "08235e6a",
+        "name": "Helen Cho"
+      },
+      "3": {
+        "memberId": "3b56819d",
+        "name": "Arthur Quinn"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-18#07:30",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "07:30",
+    "players": {
+      "1": {
+        "memberId": "f7124d59",
+        "name": "James Whitaker"
+      },
+      "2": {
+        "memberId": "4c6792ae",
+        "name": "Diana Cole"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-18#07:40",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "07:40",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-18#08:00",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "08:00",
+    "players": {
+      "1": {
+        "memberId": "2a45708c",
+        "name": "Priya Shah"
+      },
+      "2": {
+        "memberId": "19346f7b",
+        "name": "Robert Vance"
+      },
+      "3": {
+        "memberId": "5d78a3bf",
+        "name": "Frank Moretti"
+      },
+      "4": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-18#08:10",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "08:10",
+    "players": {
+      "1": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-18#08:20",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "08:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-18#09:00",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "09:00",
+    "players": {
+      "1": {
+        "memberId": "c4e91a26",
+        "name": "Charles Beaumont"
+      },
+      "2": {
+        "memberId": "d5f02b37",
+        "name": "Eleanor Whitfield"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-18#10:00",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "10:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-18#11:00",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "11:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-18#13:00",
+    "itemType": "teeTime",
+    "date": "2026-09-18",
+    "time": "13:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-19#07:00",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "07:00",
+    "players": {
+      "1": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      },
+      "2": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#07:10",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "07:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-19#07:20",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "07:20",
+    "players": {
+      "1": {
+        "memberId": "c4e91a26",
+        "name": "Charles Beaumont"
+      },
+      "2": {
+        "memberId": "d5f02b37",
+        "name": "Eleanor Whitfield"
+      },
+      "3": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      },
+      "4": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#07:30",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "07:30",
+    "players": {
+      "1": {
+        "memberId": "f7124d59",
+        "name": "James Whitaker"
+      },
+      "2": {
+        "memberId": "2a45708c",
+        "name": "Priya Shah"
+      },
+      "3": {
+        "memberId": "19346f7b",
+        "name": "Robert Vance"
+      },
+      "4": {
+        "memberId": "08235e6a",
+        "name": "Helen Cho"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#07:40",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "07:40",
+    "players": {
+      "1": {
+        "memberId": "e6013c48",
+        "name": "Thomas Langley"
+      },
+      "2": {
+        "memberId": "3b56819d",
+        "name": "Arthur Quinn"
+      },
+      "3": {
+        "memberId": "4c6792ae",
+        "name": "Diana Cole"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#07:50",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "07:50",
+    "players": {
+      "1": {
+        "memberId": "5d78a3bf",
+        "name": "Frank Moretti"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#08:00",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "08:00",
+    "players": {
+      "1": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      },
+      "2": {
+        "memberId": "c4e91a26",
+        "name": "Charles Beaumont"
+      },
+      "3": {
+        "memberId": "d5f02b37",
+        "name": "Eleanor Whitfield"
+      },
+      "4": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#08:10",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "08:10",
+    "players": {
+      "1": {
+        "memberId": "f7124d59",
+        "name": "James Whitaker"
+      },
+      "2": {
+        "memberId": "08235e6a",
+        "name": "Helen Cho"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#08:20",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "08:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-19#08:30",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "08:30",
+    "players": {
+      "1": {
+        "memberId": "2a45708c",
+        "name": "Priya Shah"
+      },
+      "2": {
+        "memberId": "19346f7b",
+        "name": "Robert Vance"
+      },
+      "3": {
+        "memberId": "e6013c48",
+        "name": "Thomas Langley"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#09:00",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "09:00",
+    "players": {
+      "1": {
+        "memberId": "3b56819d",
+        "name": "Arthur Quinn"
+      },
+      "2": {
+        "memberId": "4c6792ae",
+        "name": "Diana Cole"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#09:10",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "09:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-19#10:00",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "10:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-19#11:00",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "11:00",
+    "players": {
+      "1": {
+        "memberId": "5d78a3bf",
+        "name": "Frank Moretti"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-19#12:00",
+    "itemType": "teeTime",
+    "date": "2026-09-19",
+    "time": "12:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-20#08:00",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "08:00",
+    "players": {
+      "1": {
+        "memberId": "c4e91a26",
+        "name": "Charles Beaumont"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-20#08:10",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "08:10",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-20#08:20",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "08:20",
+    "players": {
+      "1": {
+        "memberId": "d5f02b37",
+        "name": "Eleanor Whitfield"
+      },
+      "2": {
+        "memberId": "e6013c48",
+        "name": "Thomas Langley"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-20#08:30",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "08:30",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-20#09:00",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "09:00",
+    "players": {
+      "1": {
+        "memberId": "a1b2c3d4",
+        "name": "William Hargrove"
+      },
+      "2": {
+        "memberId": "e5f6g7h8",
+        "name": "Margaret Ashford"
+      },
+      "3": {
+        "memberId": "f7124d59",
+        "name": "James Whitaker"
+      },
+      "4": {
+        "memberId": "08235e6a",
+        "name": "Helen Cho"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-20#09:10",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "09:10",
+    "players": {
+      "1": {
+        "memberId": "3b56819d",
+        "name": "Arthur Quinn"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-20#09:20",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "09:20",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-20#10:00",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "10:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-20#10:30",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "10:30",
+    "players": {
+      "1": {
+        "memberId": "2a45708c",
+        "name": "Priya Shah"
+      },
+      "2": {
+        "memberId": "4c6792ae",
+        "name": "Diana Cole"
+      }
+    }
+  },
+  {
+    "itemId": "SLOT#2026-09-20#12:00",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "12:00",
+    "players": {}
+  },
+  {
+    "itemId": "SLOT#2026-09-20#13:00",
+    "itemType": "teeTime",
+    "date": "2026-09-20",
+    "time": "13:00",
+    "players": {}
+  }
+]
