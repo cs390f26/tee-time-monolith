@@ -16,6 +16,7 @@
       <div class="navbar-end">
         <ul class="menu menu-horizontal px-1">
           <li class="menu-active"><a href="times.html">Tee Times</a></li>
+          <li><a href="reserved.html">Reserved</a></li>
           <li><a href="members.html">Members</a></li>
         </ul>
       </div>
@@ -24,87 +25,42 @@
     <main class="flex-1 max-w-xl w-full mx-auto px-4 py-8">
       <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-8">
         <h1 class="text-3xl">7:00 AM</h1>
-        <p class="font-semibold">Saturday, September 19</p>
+        <p class="font-semibold">Saturday, September 26</p>
       </div>
 
       <div class="bg-base-100 rounded-box p-6">
         <fieldset class="fieldset">
           <legend class="fieldset-legend">Players</legend>
 
-          <div class="flex flex-col sm:flex-col gap-3">
-            <div class="join w-full lg:join-horizontal">
-              <input
-                type="text"
-                class="input join-item w-full bg-base-200"
-                value="William Hargrove"
-                readonly
-                aria-label="Player 1"
-              />
-              <button type="button" class="btn join-item btn-square" aria-label="Remove William Hargrove">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div class="join w-full lg:join-horizontal">
-              <input
-                type="text"
-                class="input join-item w-full bg-base-200"
-                value="Margaret Ashford"
-                readonly
-                aria-label="Player 2"
-              />
-              <button type="button" class="btn join-item btn-square" aria-label="Remove Margaret Ashford">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div class="join w-full lg:join-horizontal">
-              <select class="select join-item w-full bg-base-200" aria-label="Player 3">
-                <option selected disabled>Add a member</option>
-                <option>Charles Beaumont</option>
-                <option>Eleanor Whitfield</option>
-                <option>Thomas Langley</option>
-                <option>Helen Cho</option>
-              </select>
-              <button
-                type="button"
-                class="btn join-item btn-square btn-disabled"
-                tabindex="-1"
-                role="button"
-                aria-disabled="true"
-                aria-label="Remove player 3"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div class="join w-full lg:join-horizontal">
-              <select class="select join-item w-full bg-base-200" aria-label="Player 4">
-                <option selected disabled>Add a member</option>
-                <option>Charles Beaumont</option>
-                <option>Eleanor Whitfield</option>
-                <option>Thomas Langley</option>
-                <option>Helen Cho</option>
-              </select>
-              <button
-                type="button"
-                class="btn join-item btn-square btn-disabled"
-                tabindex="-1"
-                role="button"
-                aria-disabled="true"
-                aria-label="Remove player 4"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+          <div class="flex flex-col gap-3">
+            <input
+              type="text"
+              class="input w-full bg-base-200"
+              value="William Hargrove"
+              readonly
+              aria-label="Player 1"
+            />
+            <input
+              type="text"
+              class="input w-full bg-base-200"
+              value="Margaret Ashford"
+              readonly
+              aria-label="Player 2"
+            />
+            <select class="select w-full bg-base-200" aria-label="Player 3">
+              <option selected disabled>Add a member</option>
+              <option>Charles Beaumont</option>
+              <option>Eleanor Whitfield</option>
+              <option>Thomas Langley</option>
+              <option>Helen Cho</option>
+            </select>
+            <select class="select w-full bg-base-200" aria-label="Player 4">
+              <option selected disabled>Add a member</option>
+              <option>Charles Beaumont</option>
+              <option>Eleanor Whitfield</option>
+              <option>Thomas Langley</option>
+              <option>Helen Cho</option>
+            </select>
           </div>
 
           <p class="label">Four members per tee time.</p>
@@ -136,7 +92,7 @@
 
     <footer class="footer sm:footer-horizontal bg-neutral text-neutral-content p-4">
       <aside>
-        <p>Cloud Computing Country Club · Est. 1924</p>
+        <p>Cloud Computing Country Club · Est. 2026</p>
       </aside>
     </footer>
   </body>

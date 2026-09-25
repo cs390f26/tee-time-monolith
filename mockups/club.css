@@ -39,7 +39,8 @@ body {
 .navbar-start a,
 h1,
 h2,
-.card-title {
+.card-title,
+.slot-time {
   font-family: "Cormorant Garamond", ui-serif, Georgia, serif;
   font-weight: 700;
 }
@@ -62,35 +63,4 @@ h2,
 
 .week-tabs > .tab-content {
   grid-column: 1 / -1;
-}
-
-.slot-pages {
-  position: relative;
-}
-
-.slot-page-radio {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-
-.slot-pages > .page {
-  display: none;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.slot-pages:has(input[value="1"]:checked) > .page[data-page="1"],
-.slot-pages:has(input[value="2"]:checked) > .page[data-page="2"],
-.slot-pages:has(input[value="3"]:checked) > .page[data-page="3"] {
-  display: flex;
-}
-
-.slot-pages:has(input[value="1"]:checked) label[data-page="1"],
-.slot-pages:has(input[value="2"]:checked) label[data-page="2"],
-.slot-pages:has(input[value="3"]:checked) label[data-page="3"] {
-  background-color: var(--color-base-300);
-  border-color: var(--color-base-300);
 }

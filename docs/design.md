@@ -90,7 +90,7 @@ MemberView(
 
 ### Tee Time Slot
 
-Time, player names (or open), `player_count` / 4, and whether it is bookable.  **`TeeTimeSlot`**:
+A card grid.  Each card is the time and a 4-mark fullness indicator.  Click a card with `player_count` under 4 to book it, unless the date is before today.  A full card and a past day are not clickable.  Names stay on the booking screen.  Reserved bookings, past and upcoming, are a separate list.  **`TeeTimeSlot`**:
 
 ```python
 TeeTimeSlot(

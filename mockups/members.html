@@ -16,6 +16,7 @@
       <div class="navbar-end">
         <ul class="menu menu-horizontal px-1">
           <li><a href="times.html">Tee Times</a></li>
+          <li><a href="reserved.html">Reserved</a></li>
           <li class="menu-active"><a href="members.html">Members</a></li>
         </ul>
       </div>
@@ -27,72 +28,56 @@
         <label for="add-member-modal" class="btn btn-sm btn-outline">Add member</label>
       </div>
 
-      <div class="slot-pages">
-        <input type="radio" name="mem-page" id="mem-p1" value="1" class="slot-page-radio" checked />
-        <input type="radio" name="mem-page" id="mem-p2" value="2" class="slot-page-radio" />
-        <div class="page" data-page="1">
-          <ul class="list bg-base-100 rounded-box">
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">William Hargrove</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 332-1044</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Margaret Ashford</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 867-2210</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Charles Beaumont</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 691-4482</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Eleanor Whitfield</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 258-7731</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Thomas Langley</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 821-0095</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">James Whitaker</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 974-3360</div>
-            </li>
-          </ul>
-        </div>
-        <div class="page" data-page="2">
-          <ul class="list bg-base-100 rounded-box">
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Helen Cho</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 419-8827</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Robert Vance</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 635-1108</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Priya Shah</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 746-2294</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Arthur Quinn</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 882-5401</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Diana Cole</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 201-6673</div>
-            </li>
-            <li class="list-row items-center">
-              <div class="list-col-grow min-w-0 truncate">Frank Moretti</div>
-              <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 317-0946</div>
-            </li>
-          </ul>
-        </div>
-        <div class="flex justify-end mt-4">
-          <div class="join lg:join-horizontal">
-            <label for="mem-p1" class="btn btn-sm join-item" data-page="1">1</label>
-            <label for="mem-p2" class="btn btn-sm join-item" data-page="2">2</label>
-          </div>
-        </div>
-      </div>
+      <ul class="list bg-base-100 rounded-box">
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">William Hargrove</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 332-1044</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Margaret Ashford</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 867-2210</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Charles Beaumont</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 691-4482</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Eleanor Whitfield</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 258-7731</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Thomas Langley</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 821-0095</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">James Whitaker</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 974-3360</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Helen Cho</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 419-8827</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Robert Vance</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 635-1108</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Priya Shah</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 746-2294</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Arthur Quinn</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 882-5401</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Diana Cole</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(484) 201-6673</div>
+        </li>
+        <li class="list-row items-center">
+          <div class="list-col-grow min-w-0 truncate">Frank Moretti</div>
+          <div class="text-sm text-base-content/50 tabular-nums shrink-0">(610) 317-0946</div>
+        </li>
+      </ul>
 
       <input type="checkbox" id="add-member-modal" class="modal-toggle" />
       <div class="modal" role="dialog">
@@ -117,7 +102,7 @@
 
     <footer class="footer sm:footer-horizontal bg-neutral text-neutral-content p-4">
       <aside>
-        <p>Cloud Computing Country Club · Est. 1924</p>
+        <p>Cloud Computing Country Club · Est. 2026</p>
       </aside>
     </footer>
   </body>
