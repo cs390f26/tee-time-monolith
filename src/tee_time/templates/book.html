@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="club">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Book · Cloud Computing Country Club</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="/static/styles.css" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-base-200">
+    <div class="navbar bg-neutral text-neutral-content border-b-4 border-primary">
+      <div class="navbar-start">
+        <a href="/" class="text-lg sm:text-2xl">Cloud Computing Country Club</a>
+      </div>
+      <div class="navbar-end">
+        <ul class="menu menu-horizontal px-1">
+          <li class="menu-active"><a href="/">Tee Times</a></li>
+          <li><a href="/reserved">Reserved</a></li>
+          <li><a href="/members">Members</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <main class="flex-1 max-w-xl w-full mx-auto px-4 py-8">
+      <p class="text-sm mb-4" id="page-status" hidden></p>
+      <div id="booking" hidden>
+        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-8">
+          <h1 class="text-3xl" id="slot-time"></h1>
+          <p class="font-semibold" id="slot-date"></p>
+        </div>
+
+        <div class="bg-base-100 rounded-box p-6">
+          <fieldset class="fieldset">
+            <legend class="fieldset-legend">Players</legend>
+            <div class="flex flex-col gap-3" id="players"></div>
+            <p class="label">Four members per tee time.</p>
+          </fieldset>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend">Holes</legend>
+              <div role="tablist" class="tabs tabs-box w-full bg-base-200">
+                <input type="radio" name="holes" class="tab flex-1" aria-label="9 holes" />
+                <input type="radio" name="holes" class="tab flex-1" aria-label="18 holes" checked />
+              </div>
+            </fieldset>
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend">Cart</legend>
+              <div role="tablist" class="tabs tabs-box w-full bg-base-200">
+                <input type="radio" name="cart" class="tab flex-1" aria-label="Walking" checked />
+                <input type="radio" name="cart" class="tab flex-1" aria-label="Cart" />
+              </div>
+            </fieldset>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:justify-end gap-2 mt-8">
+          <a href="/" class="btn">Cancel</a>
+          <button type="button" class="btn btn-primary" id="book-btn">Book</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer sm:footer-horizontal bg-neutral text-neutral-content p-4">
+      <aside>
+        <p>Cloud Computing Country Club · Est. 2026</p>
+      </aside>
+    </footer>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const slotId = params.get("id");
+      const pageStatus = document.getElementById("page-status");
+      const booking = document.getElementById("booking");
+      const players = document.getElementById("players");
+      const bookBtn = document.getElementById("book-btn");
+
+      function showStatus(message) {
+        pageStatus.hidden = false;
+        pageStatus.textContent = message;
+      }
+
+      function parseDay(iso) {
+        const [year, month, day] = iso.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function formatTime(value) {
+        const [hourText, minute] = value.split(":");
+        const hour = Number(hourText);
+        const suffix = hour < 12 ? "AM" : "PM";
+        const hour12 = hour % 12 || 12;
+        return hour12 + ":" + minute + " " + suffix;
+      }
+
+      function renderSlot(slot) {
+        document.getElementById("slot-time").textContent = formatTime(slot.time);
+        document.getElementById("slot-date").textContent = parseDay(slot.date).toLocaleDateString(
+          "en-US",
+          { weekday: "long", month: "long", day: "numeric" }
+        );
+        const byNumber = new Map((slot.players || []).map((player) => [player.number, player]));
+        players.replaceChildren();
+        for (let number = 1; number <= 4; number += 1) {
+          const player = byNumber.get(number);
+          if (player) {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "input w-full bg-base-200";
+            input.value = player.name;
+            input.readOnly = true;
+            input.setAttribute("aria-label", "Player " + number);
+            players.appendChild(input);
+          } else {
+            const select = document.createElement("select");
+            select.className = "select w-full bg-base-200";
+            select.setAttribute("aria-label", "Player " + number);
+            const placeholder = document.createElement("option");
+            placeholder.selected = true;
+            placeholder.disabled = true;
+            placeholder.value = "";
+            placeholder.textContent = "Add a member";
+            select.appendChild(placeholder);
+            for (const member of slot.availableMembers || []) {
+              const option = document.createElement("option");
+              option.value = member.id;
+              option.textContent = member.name;
+              select.appendChild(option);
+            }
+            players.appendChild(select);
+          }
+        }
+        bookBtn.disabled = !slot.bookable;
+        booking.hidden = false;
+      }
+
+      async function loadSlot() {
+        const response = await fetch("/tee-times/" + encodeURIComponent(slotId));
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          booking.hidden = true;
+          showStatus((data.error && data.error.message) || "Could not load this tee time.");
+          return;
+        }
+        pageStatus.hidden = true;
+        renderSlot(data);
+      }
+
+      bookBtn.addEventListener("click", async () => {
+        const selected = [...players.querySelectorAll("select")].find((select) => select.value);
+        const memberId = selected ? selected.value : "";
+        if (!memberId) {
+          showStatus("Choose a member.");
+          return;
+        }
+        const response = await fetch(
+          "/tee-times/" + encodeURIComponent(slotId) + "/bookings",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ memberId: memberId }),
+          }
+        );
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus((data.error && data.error.message) || "Could not book this tee time.");
+          return;
+        }
+        pageStatus.hidden = true;
+        renderSlot(data);
+      });
+
+      if (!slotId) {
+        showStatus("Choose a tee time.");
+      } else {
+        loadSlot();
+      }
+    </script>
+  </body>
+</html>

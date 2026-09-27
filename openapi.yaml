@@ -1,0 +1,316 @@
+openapi: 3.0.3
+info:
+  title: Tee time
+  version: 0.1.0
+  description: JSON API for tee times and members. The HTML pages load these routes.
+servers:
+  - url: http://127.0.0.1:5000
+paths:
+  /health:
+    get:
+      summary: Health
+      operationId: health
+      responses:
+        "200":
+          description: The app is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /tee-times:
+    get:
+      summary: Tee times for one day
+      operationId: listTeeTimes
+      parameters:
+        - name: date
+          in: query
+          required: true
+          description: Club-local day, YYYY-MM-DD.
+          schema:
+            type: string
+            format: date
+            example: "2026-09-14"
+      responses:
+        "200":
+          description: Slots for that day, earliest first. Each slot lists who is already playing, then who can still be selected. Empty until storage is wired.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeeTimeList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /tee-times/{slotId}:
+    get:
+      summary: One tee time
+      operationId: getTeeTime
+      parameters:
+        - $ref: "#/components/parameters/SlotId"
+      responses:
+        "200":
+          description: The slot. `players` are already on the tee; `availableMembers` are the rest of the roster, for the booking dropdowns.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeeTime"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /tee-times/{slotId}/bookings:
+    post:
+      summary: Add a player
+      operationId: addBooking
+      parameters:
+        - $ref: "#/components/parameters/SlotId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingRequest"
+      responses:
+        "201":
+          description: The tee time after the player is added.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeeTime"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /reserved:
+    get:
+      summary: Reserved tee times
+      operationId: listReserved
+      description: Booked tee times split into upcoming and past. Empty until storage is wired. Send Accept application/json; a browser request returns the reserved page.
+      responses:
+        "200":
+          description: Upcoming and past tee times that have players.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservedList"
+  /members:
+    get:
+      summary: Members
+      operationId: listMembers
+      description: Members sorted by name. Empty until storage is wired. Send Accept application/json; a browser request returns the members page.
+      responses:
+        "200":
+          description: The member list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberList"
+    post:
+      summary: Add a member
+      operationId: addMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberRequest"
+      responses:
+        "201":
+          description: The new member id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+components:
+  parameters:
+    SlotId:
+      name: slotId
+      in: path
+      required: true
+      description: Club-local tee time, YYYY-MM-DDTHH:MM:00.
+      schema:
+        type: string
+        example: "2026-09-19T07:00:00"
+  responses:
+    BadRequest:
+      description: The request is missing a field or a value is not usable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: BAD_REQUEST
+            message:
+              type: string
+              example: date query parameter is required
+    Member:
+      type: object
+      required: [id, name, phone]
+      properties:
+        id:
+          type: string
+          description: Eight hex characters, without a MEMBER# prefix.
+          example: a1b2c3d4
+        name:
+          type: string
+          example: William Hargrove
+        phone:
+          type: string
+          example: "(610) 332-1044"
+    Player:
+      type: object
+      required: [number, memberId, name]
+      properties:
+        number:
+          type: integer
+          minimum: 1
+          maximum: 4
+          example: 1
+        memberId:
+          type: string
+          example: a1b2c3d4
+        name:
+          type: string
+          example: William Hargrove
+    TeeTimeSummary:
+      type: object
+      required: [id, date, time, playerNames, playerCount, bookable]
+      properties:
+        id:
+          type: string
+          example: "2026-09-14T08:00:00"
+        date:
+          type: string
+          format: date
+          example: "2026-09-14"
+        time:
+          type: string
+          example: "08:00"
+        playerNames:
+          type: array
+          items:
+            type: string
+        playerCount:
+          type: integer
+          minimum: 0
+          maximum: 4
+        bookable:
+          type: boolean
+    TeeTime:
+      type: object
+      required: [id, date, time, players, playerCount, bookable, availableMembers]
+      description: >
+        One slot. `players` is who is already booked (up to four).
+        `availableMembers` is everyone else, for the empty player selects.
+      properties:
+        id:
+          type: string
+          example: "2026-09-19T07:00:00"
+        date:
+          type: string
+          format: date
+          example: "2026-09-19"
+        time:
+          type: string
+          example: "07:00"
+        players:
+          type: array
+          description: Members already on this tee time, in player order 1–4.
+          items:
+            $ref: "#/components/schemas/Player"
+        playerCount:
+          type: integer
+          minimum: 0
+          maximum: 4
+        bookable:
+          type: boolean
+        availableMembers:
+          type: array
+          description: Members not already on this slot. The book page lists these in the empty selects.
+          items:
+            $ref: "#/components/schemas/Member"
+      example:
+        id: "2026-09-19T07:00:00"
+        date: "2026-09-19"
+        time: "07:00"
+        players:
+          - number: 1
+            memberId: a1b2c3d4
+            name: William Hargrove
+          - number: 2
+            memberId: e5f6g7h8
+            name: Margaret Ashford
+        playerCount: 2
+        bookable: true
+        availableMembers:
+          - id: c4e91a26
+            name: Charles Beaumont
+            phone: "(610) 691-4482"
+          - id: d5f02b37
+            name: Eleanor Whitfield
+            phone: "(610) 258-7731"
+    TeeTimeList:
+      type: object
+      required: [teeTimes]
+      properties:
+        teeTimes:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeeTime"
+    MemberList:
+      type: object
+      required: [members]
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+    ReservedList:
+      type: object
+      required: [upcoming, past]
+      properties:
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeeTimeSummary"
+        past:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeeTimeSummary"
+    MemberRequest:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+          example: Jane Doe
+        phone:
+          type: string
+          example: "(610) 555-0100"
+    CreatedMember:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          example: ab12cd34
+    BookingRequest:
+      type: object
+      required: [memberId]
+      properties:
+        memberId:
+          type: string
+          example: c4e91a26

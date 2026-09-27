@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="club">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Members · Cloud Computing Country Club</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="/static/styles.css" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-base-200">
+    <div class="navbar bg-neutral text-neutral-content border-b-4 border-primary">
+      <div class="navbar-start">
+        <a href="/" class="text-lg sm:text-2xl">Cloud Computing Country Club</a>
+      </div>
+      <div class="navbar-end">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/">Tee Times</a></li>
+          <li><a href="/reserved">Reserved</a></li>
+          <li class="menu-active"><a href="/members">Members</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 class="text-3xl">Members</h1>
+        <label for="add-member-modal" class="btn btn-sm btn-outline">Add member</label>
+      </div>
+
+      <p class="text-sm mb-3" id="page-status" hidden></p>
+      <ul class="list bg-base-100 rounded-box" id="member-list"></ul>
+
+      <input type="checkbox" id="add-member-modal" class="modal-toggle" />
+      <div class="modal" role="dialog">
+        <div class="modal-box">
+          <h2 class="text-2xl">Add member</h2>
+          <form id="add-member-form">
+            <p class="text-sm mt-4" id="form-status" hidden></p>
+            <fieldset class="fieldset mt-4">
+              <legend class="fieldset-legend">Name</legend>
+              <input type="text" class="input w-full" id="member-name" placeholder="Full name" aria-label="Full name" />
+            </fieldset>
+            <fieldset class="fieldset">
+              <legend class="fieldset-legend">Phone</legend>
+              <input type="tel" class="input w-full" id="member-phone" placeholder="(610) 555-0100" aria-label="Phone" />
+            </fieldset>
+            <div class="modal-action">
+              <label for="add-member-modal" class="btn">Cancel</label>
+              <button type="submit" class="btn btn-primary">Add member</button>
+            </div>
+          </form>
+        </div>
+        <label class="modal-backdrop" for="add-member-modal">Close</label>
+      </div>
+    </main>
+
+    <footer class="footer sm:footer-horizontal bg-neutral text-neutral-content p-4">
+      <aside>
+        <p>Cloud Computing Country Club · Est. 2026</p>
+      </aside>
+    </footer>
+    <script>
+      const memberList = document.getElementById("member-list");
+      const pageStatus = document.getElementById("page-status");
+      const formStatus = document.getElementById("form-status");
+      const jsonHeaders = { Accept: "application/json" };
+
+      function showStatus(element, message) {
+        element.hidden = !message;
+        element.textContent = message || "";
+      }
+
+      function renderMembers(members) {
+        memberList.replaceChildren();
+        if (members.length === 0) {
+          showStatus(pageStatus, "No members.");
+          return;
+        }
+        showStatus(pageStatus, "");
+        for (const member of members) {
+          const li = document.createElement("li");
+          li.className = "list-row items-center";
+          const name = document.createElement("div");
+          name.className = "list-col-grow min-w-0 truncate";
+          name.textContent = member.name;
+          const phone = document.createElement("div");
+          phone.className = "text-sm text-base-content/50 tabular-nums shrink-0";
+          phone.textContent = member.phone;
+          li.append(name, phone);
+          memberList.appendChild(li);
+        }
+      }
+
+      async function loadMembers() {
+        const response = await fetch("/members", { headers: jsonHeaders });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(
+            pageStatus,
+            (data.error && data.error.message) || "Could not load members."
+          );
+          return;
+        }
+        renderMembers(data.members || []);
+      }
+
+      document.getElementById("add-member-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const name = document.getElementById("member-name").value;
+        const phone = document.getElementById("member-phone").value;
+        const response = await fetch("/members", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ name: name, phone: phone }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(
+            formStatus,
+            (data.error && data.error.message) || "Could not add member."
+          );
+          return;
+        }
+        document.getElementById("member-name").value = "";
+        document.getElementById("member-phone").value = "";
+        showStatus(formStatus, "");
+        document.getElementById("add-member-modal").checked = false;
+        loadMembers();
+      });
+
+      loadMembers();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="club">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reserved · Cloud Computing Country Club</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="/static/styles.css" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-base-200">
+    <div class="navbar bg-neutral text-neutral-content border-b-4 border-primary">
+      <div class="navbar-start">
+        <a href="/" class="text-lg sm:text-2xl">Cloud Computing Country Club</a>
+      </div>
+      <div class="navbar-end">
+        <ul class="menu menu-horizontal px-1">
+          <li><a href="/">Tee Times</a></li>
+          <li class="menu-active"><a href="/reserved">Reserved</a></li>
+          <li><a href="/members">Members</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+      <h1 class="text-3xl mb-8">Reserved</h1>
+      <p class="text-sm mb-4" id="page-status" hidden></p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section>
+          <h2 class="text-2xl mb-3">Upcoming</h2>
+          <ul class="list bg-base-100 rounded-box" id="upcoming"></ul>
+        </section>
+        <section>
+          <h2 class="text-2xl mb-3">Past</h2>
+          <ul class="list bg-base-100 rounded-box" id="past"></ul>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer sm:footer-horizontal bg-neutral text-neutral-content p-4">
+      <aside>
+        <p>Cloud Computing Country Club · Est. 2026</p>
+      </aside>
+    </footer>
+    <script>
+      const pageStatus = document.getElementById("page-status");
+
+      function parseDay(iso) {
+        const [year, month, day] = iso.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function formatTime(value) {
+        const [hourText, minute] = value.split(":");
+        const hour = Number(hourText);
+        const suffix = hour < 12 ? "AM" : "PM";
+        const hour12 = hour % 12 || 12;
+        return hour12 + ":" + minute + " " + suffix;
+      }
+
+      function renderList(list, slots, emptyText) {
+        list.replaceChildren();
+        if (slots.length === 0) {
+          const li = document.createElement("li");
+          li.className = "list-row";
+          const note = document.createElement("div");
+          note.className = "text-sm text-base-content/60";
+          note.textContent = emptyText;
+          li.appendChild(note);
+          list.appendChild(li);
+          return;
+        }
+        for (const slot of slots) {
+          const li = document.createElement("li");
+          li.className = "list-row items-center";
+          const time = document.createElement("div");
+          time.className = "slot-time text-lg w-28 shrink-0";
+          time.textContent = formatTime(slot.time);
+          const main = document.createElement("div");
+          main.className = "list-col-grow min-w-0";
+          const names = document.createElement("div");
+          names.className = "truncate";
+          names.textContent = (slot.playerNames || []).join(" · ");
+          const date = document.createElement("div");
+          date.className = "text-sm text-base-content/50";
+          date.textContent = parseDay(slot.date).toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          });
+          main.append(names, date);
+          li.append(time, main);
+          list.appendChild(li);
+        }
+      }
+
+      async function loadReserved() {
+        const response = await fetch("/reserved", { headers: { Accept: "application/json" } });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          pageStatus.hidden = false;
+          pageStatus.textContent =
+            (data.error && data.error.message) || "Could not load reservations.";
+          return;
+        }
+        pageStatus.hidden = true;
+        renderList(document.getElementById("upcoming"), data.upcoming || [], "No upcoming tee times.");
+        renderList(document.getElementById("past"), data.past || [], "No past tee times.");
+      }
+
+      loadReserved();
+    </script>
+  </body>
+</html>

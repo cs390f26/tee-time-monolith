@@ -90,7 +90,7 @@ MemberView(
 
 ### Tee Time Slot
 
-A card grid.  Each card is the time and a 4-mark fullness indicator.  Click a card with `player_count` under 4 to book it, unless the date is before today.  A full card and a past day are not clickable.  Names stay on the booking screen.  Reserved bookings, past and upcoming, are a separate list.  **`TeeTimeSlot`**:
+A card grid.  Each card is the time and a 4-mark fullness indicator.  Click a card with `player_count` under 4 to book it, unless the date is before today.  A full card and a past day are not clickable.  Reserved bookings, past and upcoming, are a separate list.  **`TeeTimeSlot`**:
 
 ```python
 TeeTimeSlot(
@@ -103,6 +103,30 @@ TeeTimeSlot(
 ```
 
 Bookable when `player_count < 4`.  Open: no names, `player_count` 0.
+
+### Tee Time Booking View
+
+`GET /tee-times/{slotId}` (and the same JSON after `POST .../bookings`) is what the book page loads.  It sends two lists: who is already playing, then who can still be picked.
+
+```python
+TeeTimeView(
+    id="2026-09-19T07:00:00",
+    date="2026-09-19",
+    time="07:00",
+    players=[
+        {"number": 1, "member_id": "a1b2c3d4", "name": "William Hargrove"},
+        {"number": 2, "member_id": "e5f6g7h8", "name": "Margaret Ashford"},
+    ],
+    player_count=2,
+    bookable=True,
+    available_members=[
+        MemberView(id="c4e91a26", name="Charles Beaumont", phone="(610) 691-4482"),
+        MemberView(id="d5f02b37", name="Eleanor Whitfield", phone="(610) 258-7731"),
+    ],
+)
+```
+
+`available_members` is the roster minus anyone already in `players`.  The book page shows booked names as read-only rows and fills the empty rows from `available_members`.
 
 
 

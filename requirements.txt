@@ -1,0 +1,7 @@
+flask
+gunicorn
+pytest
+pytest-playwright
+python-dotenv
+ruff
+setuptools
