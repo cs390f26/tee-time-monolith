@@ -1,5 +1,5 @@
 [Unit]
-Description=Voting app (gunicorn)
+Description=Tee Time app (gunicorn)
 After=network-online.target dynamodb-local.service
 Wants=network-online.target
 Requires=dynamodb-local.service
