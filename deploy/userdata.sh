@@ -43,7 +43,7 @@ rm -f /tmp/dynamodb_local.zip
 chown -R ec2-user:ec2-user "$APP_DIR"
 
 cp deploy/dynamodb-local.service /etc/systemd/system/
-cp deploy/voting.service /etc/systemd/system/
+cp deploy/tee-time.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now dynamodb-local.service
 
