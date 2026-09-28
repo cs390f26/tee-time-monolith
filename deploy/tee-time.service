@@ -1,0 +1,23 @@
+[Unit]
+Description=Tee Time app (gunicorn)
+After=network-online.target dynamodb-local.service
+Wants=network-online.target
+Requires=dynamodb-local.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/tee-time-monolith
+EnvironmentFile=/home/ec2-user/tee-time-monolith/.env
+# Bind to port 80 without running the whole process as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+# Wait until DynamoDB Local answers before starting gunicorn.
+ExecStartPre=/home/ec2-user/tee-time-monolith/.venv/bin/python /home/ec2-user/tee-time-monolith/scripts/wait_for_dynamodb.py
+ExecStart=/home/ec2-user/tee-time-monolith/.venv/bin/gunicorn --workers 2 --bind 0.0.0.0:80 'voting.app:launch()'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
