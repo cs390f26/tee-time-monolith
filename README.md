@@ -10,4 +10,6 @@ A scheduling app for booking a tee time at a club. Members and non-members can b
 
 ## Documentation
 
+* [Development](docs/development.md) Virtual environment, install, database, seed, and how to run the app.
+
 ## Quick Start
