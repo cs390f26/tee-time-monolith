@@ -19,9 +19,8 @@ set -euo pipefail
 REPO_URL="https://github.com/YOUR_GITHUB_USERNAME/tee-time-monolith.git"
 
 APP_DIR=/home/ec2-user/tee-time-monolith
-DYNAMODB_ZIP_URL="https://s3.us-west-2.amazonaws.com/dynamodb-local/v2.x/dynamodb_local_latest.zip"
 
-yum install -y java-17-amazon-corretto-headless python3.12 git unzip
+yum install -y python3.12 git sqlite
 
 git clone "$REPO_URL" "$APP_DIR"
 cd "$APP_DIR"
@@ -31,21 +30,19 @@ python3.12 -m venv .venv
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
 .venv/bin/pip install -e .
-cp config/example.env .env
 
-mkdir db
-curl -fsSL -o /tmp/dynamodb_local.zip "$DYNAMODB_ZIP_URL"
-unzip -o /tmp/dynamodb_local.zip -d db
-rm -f /tmp/dynamodb_local.zip
+cat > "$APP_DIR/.env" <<'EOF'
+DATABASE_PATH=club.sqlite
+EOF
 
 # This script runs as root, but the app runs as ec2-user. Change ownership
-# to ec2-user for all files created in the previous steps.
+# to ec2-user for all files created in the previous steps, then create the
+# SQLite file as that user.
 chown -R ec2-user:ec2-user "$APP_DIR"
 
-cp deploy/dynamodb-local.service /etc/systemd/system/
+sudo -u ec2-user sqlite3 "$APP_DIR/club.sqlite" < "$APP_DIR/scripts/schema.sql"
+sudo -u ec2-user sqlite3 "$APP_DIR/club.sqlite" < "$APP_DIR/scripts/seed-data.sql"
+
 cp deploy/tee-time.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now dynamodb-local.service
-
-
 systemctl enable --now tee-time.service

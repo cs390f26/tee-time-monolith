@@ -1,11 +1,11 @@
 # Deploy on EC2
 
-This document explains how to run the monolithic voting app on an EC2 instance.
+This document explains how to run the tee-time app on an EC2 instance. Gunicorn serves the Flask app on port 80. SQLite is a file on the instance (`DATABASE_PATH` in `.env`).
 
 
 ## One-Time Setup
 
-The file file `deploy/userdata.sh` is used in the deployment process, and you must change one line before you deploy
+The file `deploy/userdata.sh` is used in the deployment process, and you must change one line before you deploy.
 
 * Open `deploy/userdata.sh` in Cursor or `nano`.
 * Near the top of the file you will find the line:
@@ -36,16 +36,14 @@ The steps necessary to deploy are:
 
 * Install necessary packages
 * Clone the repo
-* Setup the `.venv`
-* Use the example `.env` file for configuration
-* Download DynamoDB Local
-* Setup systemd services for DynamoDB Local and Gunicorn
-* Launch DynamoDB
-* Create the table
-* Launch Gunicorn
+* Set up the `.venv` and install the app (`pip install -r requirements.txt` and `pip install -e .`)
+* Write `.env` with `DATABASE_PATH=club.sqlite`
+* Load `scripts/schema.sql` and `scripts/seed-data.sql`
+* Install the gunicorn systemd unit
+* Start gunicorn
 
 
-The script `deploy/userdata.sh` contains all these steps, and we can tell EC2 to run these commands at launch by putting the contents of this script in the [Cloud-init](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#userdata-linux) which is under the userdata section of the EC2 launch wizard.
+The script `deploy/userdata.sh` contains all these steps, and we can tell EC2 to run these commands at launch by putting the contents of this script in the [Cloud-init](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#userdata-linux) user data field of the EC2 launch wizard.
 
 In the Launch dialog:
 
@@ -57,19 +55,12 @@ In the Launch dialog:
 * Paste the contents of `deploy/userdata.sh` into **User data**
 
 
-When you launch the instance, AWS will boot the instance, and then run the userdata script.  This will take a minute or two, but once it completes DynamoDB Local and Gunicorn will be running (i.e. the app will be deployed).
-
-
-## Debugging
-
-The Cloud-init process writes out output of the userdata script to `/var/log/cloud-init-output.log`.  If the app does not start, SSH to the instance and look at this file to understand what failed.
+When you launch the instance, AWS will boot the instance, and then run the userdata script. This will take a minute or two. Once it completes, gunicorn is listening on port 80 and `club.sqlite` is seeded.
 
 
 ## Other Useful Commands on the EC2 Instance
 
-- `systemctl status voting` — see the status of the Gunicorn process
-- `systemctl status dynamodb-local` — see the status of the DynamoDB Local process
-- `curl -s http://localhost/health` — make a call to the `/health` endpoint, which returns a 200-status code if the web server is running and it can communicate with DynamoDB Local
-- `sudo systemctl restart voting` — restart the web process after a config or code change
-- `sudo journalctl -u voting -f` — follow the voting (gunicorn) logs
-- `sudo journalctl -u dynamodb-local -f` — follow the DynamoDB Local logs
+- `systemctl status tee-time` — see the status of the Gunicorn process
+- `curl -s http://localhost/health` — call `/health`, which returns 200 when the web server is running and it can open the SQLite file
+- `sudo systemctl restart tee-time` — restart the web process after a config or code change
+- `sudo journalctl -u tee-time -f` — follow the gunicorn logs
