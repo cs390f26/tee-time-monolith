@@ -32,7 +32,7 @@ paths:
             example: "2026-09-14"
       responses:
         "200":
-          description: Slots for that day, earliest first. Each slot lists who is already playing, then who can still be selected. Empty until storage is wired.
+          description: Slots for that day, earliest first. Each item is a summary with the time, player names, and whether the slot can be booked.
           content:
             application/json:
               schema:
@@ -269,7 +269,7 @@ components:
         teeTimes:
           type: array
           items:
-            $ref: "#/components/schemas/TeeTime"
+            $ref: "#/components/schemas/TeeTimeSummary"
     MemberList:
       type: object
       required: [members]

@@ -116,9 +116,9 @@
           card.className = "card bg-base-100 border border-base-300 opacity-45";
         }
         const body = document.createElement("span");
-        body.className = "card-body items-center p-4 gap-3";
+        body.className = "card-body items-center p-2 sm:p-4 gap-2 sm:gap-3";
         const time = document.createElement("span");
-        time.className = "slot-time text-2xl";
+        time.className = "slot-time text-lg sm:text-2xl";
         time.textContent = formatTime(slot.time);
         body.append(time, dots(slot.playerCount));
         card.appendChild(body);
@@ -130,69 +130,100 @@
         pageStatus.textContent = message;
       }
 
-      async function loadWeek() {
-        pageStatus.hidden = true;
-        weekLabel.textContent = shortRange(weekStart);
-        const today = isoDay(new Date());
+      function weekDays() {
         const days = [];
         for (let i = 0; i < 7; i += 1) {
           days.push(isoDay(addDays(weekStart, i)));
         }
-        let selected = days.includes(today) ? today : days[0];
-        weekTabs.replaceChildren();
-        try {
-          const lists = await Promise.all(
-            days.map(async (iso) => {
-              const response = await fetch("/tee-times?date=" + iso);
-              const data = await response.json().catch(() => ({}));
-              if (!response.ok) {
-                throw new Error(
-                  (data.error && data.error.message) || "Could not load tee times."
-                );
-              }
-              return data.teeTimes || [];
-            })
+        return days;
+      }
+
+      async function teeTimes(iso) {
+        const response = await fetch("/tee-times?date=" + iso);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            (data.error && data.error.message) || "Could not load tee times."
           );
-          days.forEach((iso, index) => {
-            const day = parseDay(iso);
-            const tab = document.createElement("input");
-            tab.type = "radio";
-            tab.name = "tee-week";
-            tab.className = "tab";
-            tab.setAttribute(
-              "aria-label",
-              weekday[day.getDay()] + " " + day.getDate()
-            );
-            tab.checked = iso === selected;
-            const panel = document.createElement("div");
-            panel.className = "tab-content w-full pt-6";
-            const heading = document.createElement("p");
-            heading.className = "font-semibold mb-3";
-            heading.textContent = day.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            });
-            const grid = document.createElement("div");
-            grid.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3";
-            const slots = lists[index];
-            if (slots.length === 0) {
-              const empty = document.createElement("p");
-              empty.className = "text-sm text-base-content/60";
-              empty.textContent = "No tee times.";
-              panel.append(heading, empty);
-            } else {
-              for (const slot of slots) {
-                grid.appendChild(slotCard(slot));
-              }
-              panel.append(heading, grid);
-            }
-            weekTabs.append(tab, panel);
+        }
+        return data.teeTimes || [];
+      }
+
+      function renderWeek(days, lists, selected) {
+        weekLabel.textContent = shortRange(weekStart);
+        weekTabs.replaceChildren();
+        days.forEach((iso, index) => {
+          const day = parseDay(iso);
+          const tab = document.createElement("input");
+          tab.type = "radio";
+          tab.name = "tee-week";
+          tab.className = "tab";
+          tab.setAttribute(
+            "aria-label",
+            weekday[day.getDay()] + " " + day.getDate()
+          );
+          tab.checked = iso === selected;
+          const panel = document.createElement("div");
+          panel.className = "tab-content w-full pt-6";
+          const heading = document.createElement("p");
+          heading.className = "font-semibold mb-3";
+          heading.textContent = day.toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
           });
+          const grid = document.createElement("div");
+          grid.className = "grid grid-cols-4 gap-2 sm:gap-3";
+          for (const slot of lists[index]) {
+            grid.appendChild(slotCard(slot));
+          }
+          panel.append(heading, grid);
+          weekTabs.append(tab, panel);
+        });
+      }
+
+      async function loadWeek(selectedIso) {
+        pageStatus.hidden = true;
+        const days = weekDays();
+        const today = isoDay(new Date());
+        const selected =
+          selectedIso && days.includes(selectedIso)
+            ? selectedIso
+            : days.includes(today)
+              ? today
+              : days[0];
+        try {
+          const lists = await Promise.all(days.map(teeTimes));
+          renderWeek(days, lists, selected);
         } catch (error) {
           weekTabs.replaceChildren();
           showStatus(error.message);
         }
+      }
+
+      async function openNextAvailable() {
+        const today = isoDay(new Date());
+        weekStart = startOfWeek(parseDay(today));
+        try {
+          for (let week = 0; week < 4; week += 1) {
+            const days = weekDays();
+            const lists = await Promise.all(days.map(teeTimes));
+            const open = days.findIndex(
+              (iso, index) => iso >= today && lists[index].some((slot) => slot.bookable)
+            );
+            if (open !== -1) {
+              renderWeek(days, lists, days[open]);
+              return;
+            }
+            weekStart = addDays(weekStart, 7);
+          }
+        } catch (error) {
+          weekTabs.replaceChildren();
+          showStatus(error.message);
+          return;
+        }
+        weekStart = addDays(weekStart, -7);
+        loadWeek();
       }
 
       document.getElementById("prev-week").addEventListener("click", () => {
@@ -203,7 +234,7 @@
         weekStart = addDays(weekStart, 7);
         loadWeek();
       });
-      loadWeek();
+      openNextAvailable();
     </script>
   </body>
 </html>

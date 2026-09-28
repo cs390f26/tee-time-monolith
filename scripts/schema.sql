@@ -10,7 +10,7 @@ CREATE TABLE members (
 
 
 CREATE TABLE tee_times (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     slot_date DATE NOT NULL,
     slot_time TIME NOT NULL,
     UNIQUE (slot_date, slot_time)
@@ -18,7 +18,7 @@ CREATE TABLE tee_times (
 
 
 CREATE TABLE bookings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     tee_time_id INT NOT NULL,
     member_id VARCHAR(50) NOT NULL,
     player_position INT NOT NULL CHECK (player_position BETWEEN 1 AND 4),

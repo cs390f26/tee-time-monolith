@@ -1,14 +1,23 @@
 """JSON routes for tee times and members.
 
-Storage and booking rules come later. These handlers check the request
-and return the JSON shapes the pages will use.
+Handlers check the request, call TeeTimeApp, and return JSON or HTML.
 """
 
 import re
-import secrets
+import sys
 from datetime import date, time
 
 from flask import Flask, jsonify, render_template, request
+
+from tee_time.db import ClubStorage, DatabaseUnavailableError
+from tee_time.settings import ensure_settings
+from tee_time.tee_time import (
+    NotFoundError,
+    ServiceUnavailableError,
+    TeeTimeApp,
+    ValidationError,
+)
+from tee_time.types import MemberView, TeeTimeSlot, TeeTimeView
 
 _DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _SLOT_ID_RE = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):00")
@@ -16,6 +25,10 @@ _SLOT_ID_RE = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):00")
 
 def _error(code: str, message: str, status: int):
     return jsonify({"error": {"code": code, "message": message}}), status
+
+
+def _unavailable():
+    return jsonify({"status": "unavailable"}), 503
 
 
 def _wants_json() -> bool:
@@ -39,34 +52,51 @@ def _parse_day(raw: str | None):
         return None, _error("BAD_REQUEST", "date must be YYYY-MM-DD", 400)
 
 
-def _parse_slot_id(slot_id: str) -> tuple[str, str] | None:
-    """Return (YYYY-MM-DD, HH:MM), or None when the id is not a real slot."""
+def _parse_slot_id(slot_id: str) -> tuple[date, str] | None:
+    """Return (date, HH:MM), or None when the id is not a real slot."""
     match = _SLOT_ID_RE.fullmatch(slot_id)
     if match is None:
         return None
     slot_date, slot_time = match.group(1), match.group(2)
     try:
-        date.fromisoformat(slot_date)
+        parsed_day = date.fromisoformat(slot_date)
         time.fromisoformat(slot_time)
     except ValueError:
         return None
-    return slot_date, slot_time
+    return parsed_day, slot_time
 
 
-def _slot_json(slot_id: str, slot_date: str, slot_time: str) -> dict:
-    """Players already on the slot, then members the book page can still pick."""
+def _member_json(member: MemberView) -> dict:
+    return {"id": member.id, "name": member.name, "phone": member.phone}
+
+
+def _summary_json(slot: TeeTimeSlot) -> dict:
     return {
-        "id": slot_id,
-        "date": slot_date,
-        "time": slot_time,
-        "players": [],
-        "playerCount": 0,
-        "bookable": True,
-        "availableMembers": [],
+        "id": slot.id,
+        "date": slot.date,
+        "time": slot.time,
+        "playerNames": list(slot.player_names),
+        "playerCount": slot.player_count,
+        "bookable": slot.bookable,
     }
 
 
-def create_app() -> Flask:
+def _tee_time_json(slot: TeeTimeView) -> dict:
+    return {
+        "id": slot.id,
+        "date": slot.date,
+        "time": slot.time,
+        "players": [
+            {"number": player.number, "memberId": player.member_id, "name": player.name}
+            for player in slot.players
+        ],
+        "playerCount": slot.player_count,
+        "bookable": slot.bookable,
+        "availableMembers": [_member_json(member) for member in slot.available_members],
+    }
+
+
+def create_app(tee_time_app: TeeTimeApp) -> Flask:
     """Build the Flask app and add routes."""
     app = Flask(__name__)
 
@@ -81,25 +111,46 @@ def create_app() -> Flask:
     @app.get("/reserved")
     def reserved_page():
         if _wants_json():
-            return jsonify({"upcoming": [], "past": []}), 200
+            try:
+                upcoming, past = tee_time_app.list_reserved()
+            except ServiceUnavailableError:
+                return _unavailable()
+            return jsonify(
+                {
+                    "upcoming": [_summary_json(slot) for slot in upcoming],
+                    "past": [_summary_json(slot) for slot in past],
+                }
+            ), 200
         return render_template("reserved.html")
 
     @app.get("/members")
     def members_page():
         if _wants_json():
-            return jsonify({"members": []}), 200
+            try:
+                members = tee_time_app.list_members()
+            except ServiceUnavailableError:
+                return _unavailable()
+            return jsonify({"members": [_member_json(member) for member in members]}), 200
         return render_template("members.html")
 
     @app.get("/health")
     def health():
+        try:
+            tee_time_app.health()
+        except ServiceUnavailableError:
+            return _unavailable()
         return jsonify({"status": "ok"}), 200
 
     @app.get("/tee-times")
     def list_tee_times():
-        _day, error = _parse_day(request.args.get("date"))
+        day, error = _parse_day(request.args.get("date"))
         if error is not None:
             return error
-        return jsonify({"teeTimes": []}), 200
+        try:
+            slots = tee_time_app.list_tee_times(day)
+        except ServiceUnavailableError:
+            return _unavailable()
+        return jsonify({"teeTimes": [_summary_json(slot) for slot in slots]}), 200
 
     @app.get("/tee-times/<slot_id>")
     def get_tee_time(slot_id):
@@ -110,8 +161,14 @@ def create_app() -> Flask:
                 "tee time id must look like 2026-09-19T07:00:00",
                 400,
             )
-        slot_date, slot_time = parsed
-        return jsonify(_slot_json(slot_id, slot_date, slot_time)), 200
+        day, slot_time = parsed
+        try:
+            slot = tee_time_app.get_tee_time(day, slot_time)
+        except NotFoundError as exc:
+            return _error("NOT_FOUND", str(exc), 404)
+        except ServiceUnavailableError:
+            return _unavailable()
+        return jsonify(_tee_time_json(slot)), 200
 
     @app.post("/members")
     def add_member():
@@ -122,9 +179,13 @@ def create_app() -> Flask:
         phone = body.get("phone")
         if not isinstance(name, str) or not isinstance(phone, str):
             return _error("BAD_REQUEST", "name and phone are required", 400)
-        if not name.strip() or not phone.strip():
-            return _error("BAD_REQUEST", "name and phone must not be blank", 400)
-        return jsonify({"id": secrets.token_hex(4)}), 201
+        try:
+            member_id = tee_time_app.add_member(name, phone)
+        except ValidationError as exc:
+            return _error("BAD_REQUEST", str(exc), 400)
+        except ServiceUnavailableError:
+            return _unavailable()
+        return jsonify({"id": member_id}), 201
 
     @app.post("/tee-times/<slot_id>/bookings")
     def add_booking(slot_id):
@@ -138,18 +199,42 @@ def create_app() -> Flask:
         body = request.get_json(silent=True)
         if not isinstance(body, dict) or not isinstance(body.get("memberId"), str):
             return _error("BAD_REQUEST", "memberId is required", 400)
-        if not body["memberId"].strip():
+        member_id = body["memberId"].strip()
+        if not member_id:
             return _error("BAD_REQUEST", "memberId must not be blank", 400)
-        slot_date, slot_time = parsed
-        return jsonify(_slot_json(slot_id, slot_date, slot_time)), 201
+        day, slot_time = parsed
+        try:
+            slot = tee_time_app.book(day, slot_time, member_id)
+        except ValidationError as exc:
+            return _error("BAD_REQUEST", str(exc), 400)
+        except NotFoundError as exc:
+            return _error("NOT_FOUND", str(exc), 404)
+        except ServiceUnavailableError:
+            return _unavailable()
+        return jsonify(_tee_time_json(slot)), 201
 
     return app
 
 
 def launch() -> Flask:
-    """Build the Flask app. Wiring a database comes later."""
-    return create_app()
+    """Build ClubStorage + TeeTimeApp + Flask from DATABASE_PATH."""
+    settings = ensure_settings()
+    storage = ClubStorage(settings["DATABASE_PATH"])
+    try:
+        storage.create_schema()
+        storage.ping()
+    except DatabaseUnavailableError as exc:
+        raise RuntimeError(
+            "Database not reachable. Check DATABASE_PATH in .env. "
+            f"Details: {exc}"
+        ) from exc
+    return create_app(TeeTimeApp(storage))
 
 
 if __name__ == "__main__":
-    launch().run(debug=True, port=5000)
+    try:
+        app = launch()
+    except RuntimeError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)
+    app.run(debug=True, port=5000)
