@@ -47,7 +47,5 @@ cp deploy/tee-time.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now dynamodb-local.service
 
-.venv/bin/python scripts/wait_for_dynamodb.py
-.venv/bin/python scripts/create_table.py
 
 systemctl enable --now tee-time.service
