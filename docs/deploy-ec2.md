@@ -49,7 +49,7 @@ The script `deploy/userdata.sh` contains all these steps, and we can tell EC2 to
 
 In the Launch dialog:
 
-* (Optional, but encouraged) Name the instance "Voting app"
+* (Optional, but encouraged) Name the instance "Tee Time app"
 * Use the default `t3.micro` instance type
 * Select your `vockey` for authentication
 * Ensure that HTTP and SSH are enabled in the security group
