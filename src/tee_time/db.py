@@ -28,14 +28,9 @@ class ClubStorage:
 
     def create_schema(self) -> None:
         """Create members, tee times, and bookings if they are not there yet."""
-        creates = []
-        for statement in _SCHEMA.read_text().split(";"):
-            text = statement.strip()
-            if text.upper().startswith("CREATE TABLE"):
-                creates.append(text.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS", 1))
         try:
             with self._connect() as conn:
-                for statement in creates:
+                for statement in create_table_statements():
                     conn.execute(statement)
         except sqlite3.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
@@ -58,7 +53,7 @@ class ClubStorage:
                 rows = conn.execute("SELECT id, name, phone FROM members").fetchall()
         except sqlite3.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
-        return [MemberData(id=row["id"], name=row["name"], phone=row["phone"]) for row in rows]
+        return [member_from_row(row) for row in rows]
 
     def get_member(self, member_id: str) -> MemberData | None:
         try:
@@ -71,7 +66,7 @@ class ClubStorage:
             raise DatabaseUnavailableError("database not reachable") from exc
         if row is None:
             return None
-        return MemberData(id=row["id"], name=row["name"], phone=row["phone"])
+        return member_from_row(row)
 
     def add_member(self, member: MemberData) -> None:
         try:
@@ -86,108 +81,83 @@ class ClubStorage:
             raise DatabaseUnavailableError("database not reachable") from exc
 
     def list_tee_times(self, day: date) -> list[TeeTimeData]:
-        return self._slots("t.slot_date = ?", (day.isoformat(),))
+        return self.slots_on_day(day)
 
     def list_booked(self) -> list[TeeTimeData]:
-        return [
-            slot
-            for slot in self._slots("1 = 1", ())
-            if slot.players
-        ]
+        return self.booked_slots()
 
     def get_tee_time(self, day: date, slot_time: str) -> TeeTimeData | None:
-        slots = self._slots(
-            "t.slot_date = ? AND substr(t.slot_time, 1, 5) = ?",
-            (day.isoformat(), _hhmm(slot_time)),
+        return self.slot_at(day, slot_time)
+
+    def slots_on_day(self, day: date) -> list[TeeTimeData]:
+        return self._load_tee_times(
+            """
+            SELECT id, slot_date, slot_time
+            FROM tee_times
+            WHERE slot_date = ?
+            ORDER BY slot_time
+            """,
+            (day.isoformat(),),
         )
-        return slots[0] if slots else None
+
+    def slot_at(self, day: date, slot_time: str) -> TeeTimeData | None:
+        slots = self._load_tee_times(
+            """
+            SELECT id, slot_date, slot_time
+            FROM tee_times
+            WHERE slot_date = ? AND substr(slot_time, 1, 5) = ?
+            """,
+            (day.isoformat(), hour_and_minute(slot_time)),
+        )
+        if not slots:
+            return None
+        return slots[0]
+
+    def booked_slots(self) -> list[TeeTimeData]:
+        slots = self._load_tee_times(
+            """
+            SELECT id, slot_date, slot_time
+            FROM tee_times
+            ORDER BY slot_date, slot_time
+            """,
+            (),
+        )
+        return [slot for slot in slots if slot.players]
 
     def add_player(self, day: date, slot_time: str, player: PlayerData) -> TeeTimeData:
         day_text = day.isoformat()
-        hhmm = _hhmm(slot_time)
+        hhmm = hour_and_minute(slot_time)
         conn = self._connect()
         try:
+            # One transaction so the seat check and the insert cannot interleave.
             conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                """
-                SELECT id FROM tee_times
-                WHERE slot_date = ? AND substr(slot_time, 1, 5) = ?
-                """,
-                (day_text, hhmm),
-            ).fetchone()
-            if row is None:
-                cursor = conn.execute(
-                    "INSERT INTO tee_times (slot_date, slot_time) VALUES (?, ?)",
-                    (day_text, f"{hhmm}:00"),
-                )
-                tee_time_id = cursor.lastrowid
-            else:
-                tee_time_id = row["id"]
-            players = _players(conn, tee_time_id)
-            if len(players) >= MAX_PLAYERS:
-                raise SlotFullError("foursome full")
-            if any(existing.member_id == player.member_id for existing in players):
-                raise PlayerAlreadyBookedError("already booked on this slot")
-            if player.number < 1 or player.number > MAX_PLAYERS:
-                raise PositionTakenError(f"player number {player.number} is not open")
-            if any(existing.number == player.number for existing in players):
-                raise PositionTakenError(f"player number {player.number} is taken")
-            conn.execute(
-                """
-                INSERT INTO bookings (tee_time_id, member_id, player_position)
-                VALUES (?, ?, ?)
-                """,
-                (tee_time_id, player.member_id, player.number),
-            )
+            tee_time_id = find_or_create_tee_time(conn, day_text, hhmm)
+            reject_closed_seat(players_for(conn, tee_time_id), player)
+            insert_booking(conn, tee_time_id, player)
             conn.commit()
         except (SlotFullError, PlayerAlreadyBookedError, PositionTakenError):
             conn.rollback()
             raise
         except sqlite3.IntegrityError as exc:
             conn.rollback()
-            raise _from_integrity(exc) from exc
+            raise storage_error(exc) from exc
         except sqlite3.Error as exc:
             conn.rollback()
             raise DatabaseUnavailableError("database not reachable") from exc
         finally:
             conn.close()
-        updated = self.get_tee_time(day, hhmm)
+        updated = self.slot_at(day, hhmm)
         if updated is None:
             raise DatabaseUnavailableError("database not reachable")
         return updated
 
-    def _slots(self, where: str, params: tuple) -> list[TeeTimeData]:
+    def _load_tee_times(self, sql: str, params: tuple) -> list[TeeTimeData]:
         try:
             with self._connect() as conn:
-                rows = conn.execute(
-                    f"""
-                    SELECT t.slot_date, t.slot_time, b.player_position, b.member_id, m.name
-                    FROM tee_times t
-                    LEFT JOIN bookings b ON b.tee_time_id = t.id
-                    LEFT JOIN members m ON m.id = b.member_id
-                    WHERE {where}
-                    ORDER BY t.slot_date, t.slot_time, b.player_position
-                    """,
-                    params,
-                ).fetchall()
+                rows = conn.execute(sql, params).fetchall()
+                return [tee_time_from_row(conn, row) for row in rows]
         except sqlite3.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
-        grouped: dict[tuple[str, str], list[PlayerData]] = {}
-        for row in rows:
-            key = (row["slot_date"], _hhmm(row["slot_time"]))
-            grouped.setdefault(key, [])
-            if row["member_id"] is not None:
-                grouped[key].append(
-                    PlayerData(
-                        number=row["player_position"],
-                        member_id=row["member_id"],
-                        name=row["name"],
-                    )
-                )
-        return [
-            TeeTimeData(date=slot_date, time=slot_time, players=tuple(players))
-            for (slot_date, slot_time), players in grouped.items()
-        ]
 
     def _connect(self) -> sqlite3.Connection:
         try:
@@ -199,7 +169,34 @@ class ClubStorage:
         return conn
 
 
-def _players(conn: sqlite3.Connection, tee_time_id: int) -> list[PlayerData]:
+def create_table_statements() -> list[str]:
+    """CREATE TABLE statements from schema.sql, safe to re-run.
+
+    Drops stay out so startup does not wipe an existing database.
+    """
+    statements = []
+    for statement in _SCHEMA.read_text().split(";"):
+        text = statement.strip()
+        if text.upper().startswith("CREATE TABLE"):
+            statements.append(
+                text.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS", 1)
+            )
+    return statements
+
+
+def member_from_row(row: sqlite3.Row) -> MemberData:
+    return MemberData(id=row["id"], name=row["name"], phone=row["phone"])
+
+
+def tee_time_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> TeeTimeData:
+    return TeeTimeData(
+        date=row["slot_date"],
+        time=hour_and_minute(row["slot_time"]),
+        players=tuple(players_for(conn, row["id"])),
+    )
+
+
+def players_for(conn: sqlite3.Connection, tee_time_id: int) -> list[PlayerData]:
     rows = conn.execute(
         """
         SELECT b.player_position, b.member_id, m.name
@@ -211,16 +208,59 @@ def _players(conn: sqlite3.Connection, tee_time_id: int) -> list[PlayerData]:
         (tee_time_id,),
     ).fetchall()
     return [
-        PlayerData(number=row["player_position"], member_id=row["member_id"], name=row["name"])
+        PlayerData(
+            number=row["player_position"],
+            member_id=row["member_id"],
+            name=row["name"],
+        )
         for row in rows
     ]
 
 
-def _hhmm(value: str) -> str:
+def find_or_create_tee_time(conn: sqlite3.Connection, day_text: str, hhmm: str) -> int:
+    row = conn.execute(
+        """
+        SELECT id FROM tee_times
+        WHERE slot_date = ? AND substr(slot_time, 1, 5) = ?
+        """,
+        (day_text, hhmm),
+    ).fetchone()
+    if row is not None:
+        return row["id"]
+    cursor = conn.execute(
+        "INSERT INTO tee_times (slot_date, slot_time) VALUES (?, ?)",
+        (day_text, f"{hhmm}:00"),
+    )
+    return cursor.lastrowid
+
+
+def reject_closed_seat(players: list[PlayerData], player: PlayerData) -> None:
+    if len(players) >= MAX_PLAYERS:
+        raise SlotFullError("foursome full")
+    if any(existing.member_id == player.member_id for existing in players):
+        raise PlayerAlreadyBookedError("already booked on this slot")
+    if player.number < 1 or player.number > MAX_PLAYERS:
+        raise PositionTakenError(f"player number {player.number} is not open")
+    if any(existing.number == player.number for existing in players):
+        raise PositionTakenError(f"player number {player.number} is taken")
+
+
+def insert_booking(conn: sqlite3.Connection, tee_time_id: int, player: PlayerData) -> None:
+    conn.execute(
+        """
+        INSERT INTO bookings (tee_time_id, member_id, player_position)
+        VALUES (?, ?, ?)
+        """,
+        (tee_time_id, player.member_id, player.number),
+    )
+
+
+def hour_and_minute(value: str) -> str:
+    """Club times are HH:MM. Stored values may include seconds."""
     return value[:5]
 
 
-def _from_integrity(exc: sqlite3.IntegrityError) -> Exception:
+def storage_error(exc: sqlite3.IntegrityError) -> Exception:
     message = str(exc)
     if "members.id" in message:
         return MemberAlreadyExistsError(message)

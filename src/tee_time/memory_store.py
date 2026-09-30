@@ -12,7 +12,13 @@ from tee_time.store import (
     PositionTakenError,
     SlotFullError,
 )
-from tee_time.types import MAX_PLAYERS, MemberData, PlayerData, TeeTimeData
+from tee_time.types import (
+    MAX_PLAYERS,
+    MemberData,
+    PlayerData,
+    TeeTimeData,
+    player_number,
+)
 
 
 class MemoryClubStore:
@@ -77,5 +83,5 @@ class MemoryClubStore:
 
 
 def _ordered_slot(slot: TeeTimeData) -> TeeTimeData:
-    players = tuple(sorted(slot.players, key=lambda player: player.number))
+    players = tuple(sorted(slot.players, key=player_number))
     return TeeTimeData(date=slot.date, time=slot.time, players=players)

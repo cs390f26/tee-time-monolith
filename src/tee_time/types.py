@@ -93,8 +93,16 @@ def member_view(member: MemberData) -> MemberView:
     return MemberView(id=member.id, name=member.name, phone=member.phone)
 
 
+def player_number(player: PlayerData) -> int:
+    return player.number
+
+
+def member_view_order(member: MemberView) -> tuple[str, str]:
+    return (member.name.casefold(), member.id)
+
+
 def _ordered(players: tuple[PlayerData, ...]) -> tuple[PlayerData, ...]:
-    return tuple(sorted(players, key=lambda player: player.number))
+    return tuple(sorted(players, key=player_number))
 
 
 def tee_time_slot(slot: TeeTimeData, now: datetime) -> TeeTimeSlot:
@@ -120,7 +128,7 @@ def tee_time_view(
     available = [
         member_view(member) for member in members if member.id not in booked
     ]
-    available.sort(key=lambda member: (member.name.casefold(), member.id))
+    available.sort(key=member_view_order)
     count = len(players)
     return TeeTimeView(
         id=slot_id(slot.date, slot.time),
