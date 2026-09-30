@@ -5,3 +5,4 @@ pytest-playwright
 python-dotenv
 ruff
 setuptools
+pytest-cov
