@@ -3,7 +3,6 @@
 Handlers check the request, call TeeTimeApp, and return JSON or HTML.
 """
 
-import re
 import sys
 from datetime import date, time
 
@@ -19,8 +18,11 @@ from tee_time.tee_time import (
 )
 from tee_time.types import MemberView, TeeTimeSlot, TeeTimeView
 
-_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
-_SLOT_ID_RE = re.compile(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):00")
+_SLOT_ID_MESSAGE = "tee time id must look like 2026-09-19T07:00:00"
+
+
+class RequestError(Exception):
+    """Raised when the request cannot be read. The application was not called."""
 
 
 def _error(code: str, message: str, status: int):
@@ -39,31 +41,77 @@ def _wants_json() -> bool:
     )
 
 
-def _parse_day(raw: str | None):
-    """Return a date, or a 400 response when the query value is unusable."""
+def parse_day(raw: str | None) -> date:
+    """Return a YYYY-MM-DD date, or raise RequestError."""
     if raw is None or not raw.strip():
-        return None, _error("BAD_REQUEST", "date query parameter is required", 400)
+        raise RequestError("date query parameter is required")
     text = raw.strip()
-    if _DATE_RE.fullmatch(text) is None:
-        return None, _error("BAD_REQUEST", "date must be YYYY-MM-DD", 400)
+    if not _iso_day(text):
+        raise RequestError("date must be YYYY-MM-DD")
     try:
-        return date.fromisoformat(text), None
+        return date.fromisoformat(text)
     except ValueError:
-        return None, _error("BAD_REQUEST", "date must be YYYY-MM-DD", 400)
+        raise RequestError("date must be YYYY-MM-DD") from None
 
 
-def _parse_slot_id(slot_id: str) -> tuple[date, str] | None:
-    """Return (date, HH:MM), or None when the id is not a real slot."""
-    match = _SLOT_ID_RE.fullmatch(slot_id)
-    if match is None:
-        return None
-    slot_date, slot_time = match.group(1), match.group(2)
+def parse_slot_id(slot_id: str) -> tuple[date, str]:
+    """Return (date, HH:MM) for an id like 2026-09-19T07:00:00."""
+    date_text, separator, clock_text = slot_id.partition("T")
+    hour_minute = clock_text[:-3]
+    if separator != "T" or not clock_text.endswith(":00"):
+        raise RequestError(_SLOT_ID_MESSAGE)
+    if not _iso_day(date_text) or not _iso_hhmm(hour_minute):
+        raise RequestError(_SLOT_ID_MESSAGE)
     try:
-        parsed_day = date.fromisoformat(slot_date)
-        time.fromisoformat(slot_time)
+        parsed_day = date.fromisoformat(date_text)
+        time.fromisoformat(hour_minute)
     except ValueError:
-        return None
-    return parsed_day, slot_time
+        raise RequestError(_SLOT_ID_MESSAGE) from None
+    return parsed_day, hour_minute
+
+
+def parse_new_member() -> tuple[str, str]:
+    """Return name and phone from the JSON body, or raise RequestError."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise RequestError("JSON body required")
+    name = body.get("name")
+    phone = body.get("phone")
+    if not isinstance(name, str) or not isinstance(phone, str):
+        raise RequestError("name and phone are required")
+    return name, phone
+
+
+def parse_member_id() -> str:
+    """Return memberId from the JSON body, or raise RequestError."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("memberId"), str):
+        raise RequestError("memberId is required")
+    member_id = body["memberId"].strip()
+    if not member_id:
+        raise RequestError("memberId must not be blank")
+    return member_id
+
+
+def _iso_day(text: str) -> bool:
+    parts = text.split("-")
+    return (
+        len(parts) == 3
+        and len(parts[0]) == 4
+        and len(parts[1]) == 2
+        and len(parts[2]) == 2
+        and all(part.isdigit() for part in parts)
+    )
+
+
+def _iso_hhmm(text: str) -> bool:
+    parts = text.split(":")
+    return (
+        len(parts) == 2
+        and len(parts[0]) == 2
+        and len(parts[1]) == 2
+        and all(part.isdigit() for part in parts)
+    )
 
 
 def _member_json(member: MemberView) -> dict:
@@ -99,6 +147,10 @@ def _tee_time_json(slot: TeeTimeView) -> dict:
 def create_app(tee_time_app: TeeTimeApp) -> Flask:
     """Build the Flask app and add routes."""
     app = Flask(__name__)
+
+    @app.errorhandler(RequestError)
+    def bad_request(exc: RequestError):
+        return _error("BAD_REQUEST", str(exc), 400)
 
     @app.get("/")
     def times_page():
@@ -143,9 +195,7 @@ def create_app(tee_time_app: TeeTimeApp) -> Flask:
 
     @app.get("/tee-times")
     def list_tee_times():
-        day, error = _parse_day(request.args.get("date"))
-        if error is not None:
-            return error
+        day = parse_day(request.args.get("date"))
         try:
             slots = tee_time_app.list_tee_times(day)
         except ServiceUnavailableError:
@@ -154,14 +204,7 @@ def create_app(tee_time_app: TeeTimeApp) -> Flask:
 
     @app.get("/tee-times/<slot_id>")
     def get_tee_time(slot_id):
-        parsed = _parse_slot_id(slot_id)
-        if parsed is None:
-            return _error(
-                "BAD_REQUEST",
-                "tee time id must look like 2026-09-19T07:00:00",
-                400,
-            )
-        day, slot_time = parsed
+        day, slot_time = parse_slot_id(slot_id)
         try:
             slot = tee_time_app.get_tee_time(day, slot_time)
         except NotFoundError as exc:
@@ -172,13 +215,7 @@ def create_app(tee_time_app: TeeTimeApp) -> Flask:
 
     @app.post("/members")
     def add_member():
-        body = request.get_json(silent=True)
-        if not isinstance(body, dict):
-            return _error("BAD_REQUEST", "JSON body required", 400)
-        name = body.get("name")
-        phone = body.get("phone")
-        if not isinstance(name, str) or not isinstance(phone, str):
-            return _error("BAD_REQUEST", "name and phone are required", 400)
+        name, phone = parse_new_member()
         try:
             member_id = tee_time_app.add_member(name, phone)
         except ValidationError as exc:
@@ -189,20 +226,8 @@ def create_app(tee_time_app: TeeTimeApp) -> Flask:
 
     @app.post("/tee-times/<slot_id>/bookings")
     def add_booking(slot_id):
-        parsed = _parse_slot_id(slot_id)
-        if parsed is None:
-            return _error(
-                "BAD_REQUEST",
-                "tee time id must look like 2026-09-19T07:00:00",
-                400,
-            )
-        body = request.get_json(silent=True)
-        if not isinstance(body, dict) or not isinstance(body.get("memberId"), str):
-            return _error("BAD_REQUEST", "memberId is required", 400)
-        member_id = body["memberId"].strip()
-        if not member_id:
-            return _error("BAD_REQUEST", "memberId must not be blank", 400)
-        day, slot_time = parsed
+        day, slot_time = parse_slot_id(slot_id)
+        member_id = parse_member_id()
         try:
             slot = tee_time_app.book(day, slot_time, member_id)
         except ValidationError as exc:
