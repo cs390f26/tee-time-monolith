@@ -1,121 +1,213 @@
-from datetime import date
-import pytest
+from datetime import date, datetime, timezone
 from unittest.mock import MagicMock
+import pytest
 
+from tee_time.store import (
+    DatabaseUnavailableError,
+    MemberAlreadyExistsError,
+    PlayerAlreadyBookedError,
+    PositionTakenError,
+    SlotFullError,
+    SlotNotFoundError,
+)
 from tee_time.tee_time import (
+    NAME_MAX,
+    PHONE_MAX,
     NotFoundError,
     ServiceUnavailableError,
     TeeTimeApp,
     ValidationError,
+    checked_member,
+    club_now,
+    open_player_number,
+    require_can_book,
+    split_reserved,
 )
-from tee_time.types import MemberView, TeeTimeSlot, TeeTimeView
+from tee_time.types import MemberData, PlayerData, TeeTimeData, TeeTimeSlot, TeeTimeView
 
 
 @pytest.fixture
-def mock_storage():
-    """Provides a mocked ClubStorage dependency."""
-    return MagicMock()
+def mock_store():
+    store = MagicMock()
+    store.list_members.return_value = []
+    store.list_tee_times.return_value = []
+    return store
 
 
 @pytest.fixture
-def app(mock_storage):
-    """Provides a TeeTimeApp instance initialized with mock storage."""
-    return TeeTimeApp(mock_storage)
+def app(mock_store):
+    return TeeTimeApp(store=mock_store)
 
 
+# --- Health & Member Tests ---
 
-def test_health_ok(app, mock_storage):
+def test_health_ok(app, mock_store):
+    mock_store.ping.return_value = None
     app.health()
-    mock_storage.ping.assert_called_once()
+    mock_store.ping.assert_called_once()
 
 
-def test_health_raises_when_db_down(app, mock_storage):
-    mock_storage.ping.side_effect = Exception("DB connection failed")
-    with pytest.raises(ServiceUnavailableError):
+def test_health_raises_service_unavailable(app, mock_store):
+    mock_store.ping.side_effect = DatabaseUnavailableError("down")
+    with pytest.raises(ServiceUnavailableError, match="database not reachable"):
         app.health()
 
 
+def test_list_members_sorted(app, mock_store):
+    m1 = MemberData(id="m1", name="Bob", phone="555-0100")
+    m2 = MemberData(id="m2", name="alice", phone="555-0101")
+    mock_store.list_members.return_value = [m1, m2]
 
-def test_add_member_returns_id(app, mock_storage):
-    mock_storage.save_member.return_value = "mem_101"
-    
+    members = app.list_members()
+    assert [m.name for m in members] == ["alice", "Bob"]
+
+
+def test_add_member_success(app, mock_store):
     member_id = app.add_member("Alice Smith", "555-0100")
-    
-    assert member_id == "mem_101"
-    mock_storage.save_member.assert_called_once_with("Alice Smith", "555-0100")
+    assert isinstance(member_id, str)
+    assert len(member_id) > 0
+    mock_store.add_member.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    "name, phone",
-    [
-        ("", "555-0100"),            
-        ("   ", "555-0100"),        
-        ("Alice", ""),               
-        ("Alice", "   "),            
-        ("a" * 101, "555-0100"),     
-    ],
-)
-def test_add_member_validation(app, name, phone):
-    with pytest.raises(ValidationError):
-        app.add_member(name, phone)
+def test_add_member_collision_raises_service_unavailable(app, mock_store):
+    mock_store.add_member.side_effect = MemberAlreadyExistsError("collision")
+    with pytest.raises(ServiceUnavailableError, match="member id collision"):
+        app.add_member("Alice Smith", "555-0100")
 
 
+# --- Checked Member Validations ---
 
-def test_list_tee_times(app, mock_storage):
+@pytest.mark.parametrize("name,phone,match", [
+    ("", "555-0100", "name must not be blank"),
+    ("Alice", "", "phone must not be blank"),
+    ("A" * (NAME_MAX + 1), "555-0100", f"name must be at most {NAME_MAX}"),
+    ("Alice", "5" * (PHONE_MAX + 1), f"phone must be at most {PHONE_MAX}"),
+])
+def test_checked_member_validation_errors(name, phone, match):
+    with pytest.raises(ValidationError, match=match):
+        checked_member(name, phone)
+
+
+# --- List & Get Tee Times ---
+
+def test_list_tee_times(app, mock_store):
     target_date = date(2026, 9, 19)
-    sample_slot = TeeTimeSlot(
-        id="2026-09-19T07:00:00",
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    slots = app.list_tee_times(target_date, now=now)
+    assert len(slots) == 16
+    assert isinstance(slots[0], TeeTimeSlot)
+
+
+def test_get_tee_time_default_time_when_empty_in_store(app, mock_store):
+    target_date = date(2026, 9, 19)
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    mock_store.get_tee_time.return_value = None
+
+    view = app.get_tee_time(target_date, "07:00", now=now)
+    assert isinstance(view, TeeTimeView)
+    assert view.time == "07:00"
+
+
+def test_get_tee_time_not_found(app, mock_store):
+    target_date = date(2026, 9, 19)
+    mock_store.get_tee_time.return_value = None
+
+    with pytest.raises(NotFoundError, match="tee time not found"):
+        app.get_tee_time(target_date, "19:00")
+
+
+# --- Booking Tests ---
+
+def test_book_tee_time_success(app, mock_store):
+    target_date = date(2026, 9, 19)
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    slot_data = TeeTimeData(date="2026-09-19", time="07:00", players=())
+    member_data = MemberData(id="m101", name="Alice", phone="555-0100")
+
+    mock_store.get_tee_time.return_value = slot_data
+    mock_store.get_member.return_value = member_data
+    mock_store.add_player.return_value = TeeTimeData(
         date="2026-09-19",
         time="07:00",
-        player_names=["Alice"],
-        player_count=1,
-        bookable=True,
+        players=(PlayerData(number=1, member_id="m101", name="Alice"),),
     )
-    mock_storage.get_slots_for_day.return_value = [sample_slot]
 
-    slots = app.list_tee_times(target_date)
-    
-    assert len(slots) == 1
-    assert slots[0].id == "2026-09-19T07:00:00"
-    mock_storage.get_slots_for_day.assert_called_once_with(target_date)
+    view = app.book(target_date, "07:00", "m101", now=now)
+    assert isinstance(view, TeeTimeView)
+    assert view.player_count == 1
 
 
-def test_get_tee_time_not_found(app, mock_storage):
-    mock_storage.get_slot_view.return_value = None
-    
-    with pytest.raises(NotFoundError):
-        app.get_tee_time(date(2026, 9, 19), "07:00")
+def test_book_tee_time_slot_not_found(app, mock_store):
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    mock_store.get_tee_time.return_value = None
+
+    with pytest.raises(NotFoundError, match="tee time not found"):
+        app.book(date(2026, 9, 19), "19:00", "m101", now=now)
 
 
+def test_book_tee_time_member_not_found(app, mock_store):
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    slot_data = TeeTimeData(date="2026-09-19", time="07:00", players=())
+    mock_store.get_tee_time.return_value = slot_data
+    mock_store.get_member.return_value = None
 
-def test_book_tee_time_success(app, mock_storage):
-    target_date = date(2026, 9, 19)
-    mock_view = TeeTimeView(
-        id="2026-09-19T07:00:00",
-        date="2026-09-19",
-        time="07:00",
-        players=[],
-        player_count=1,
-        bookable=True,
-        available_members=[],
+    with pytest.raises(NotFoundError, match="member not found"):
+        app.book(date(2026, 9, 19), "07:00", "m_nonexistent", now=now)
+
+
+@pytest.mark.parametrize("exception_cls,match", [
+    (SlotNotFoundError, "tee time not found"),
+    (SlotFullError, "foursome full"),
+    (PlayerAlreadyBookedError, "already booked on this slot"),
+    (PositionTakenError, "foursome full"),
+])
+def test_save_player_storage_exceptions(app, mock_store, exception_cls, match):
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    slot_data = TeeTimeData(date="2026-09-19", time="07:00", players=())
+    member_data = MemberData(id="m101", name="Alice", phone="555-0100")
+
+    mock_store.get_tee_time.return_value = slot_data
+    mock_store.get_member.return_value = member_data
+    mock_store.add_player.side_effect = exception_cls("error")
+
+    with pytest.raises((ValidationError, NotFoundError), match=match):
+        app.book(date(2026, 9, 19), "07:00", "m101", now=now)
+
+
+# --- Booking Validation Helpers ---
+
+def test_require_can_book_past_time():
+    now = datetime(2026, 9, 19, 8, 0, tzinfo=timezone.utc)
+    slot = TeeTimeData(date="2026-09-19", time="07:00", players=())
+    member = MemberData(id="m1", name="Alice", phone="555-0100")
+
+    with pytest.raises(ValidationError, match="tee time is in the past"):
+        require_can_book(slot, member, now)
+
+
+def test_open_player_number_full():
+    players = tuple(
+        PlayerData(number=i, member_id=f"m{i}", name=f"P{i}") for i in range(1, 5)
     )
-    mock_storage.add_booking.return_value = mock_view
-
-    result = app.book(target_date, "07:00", "mem_101")
-    
-    assert result == mock_view
-    mock_storage.add_booking.assert_called_once_with(target_date, "07:00", "mem_101")
+    with pytest.raises(ValidationError, match="foursome full"):
+        open_player_number(players)
 
 
-def test_book_tee_time_slot_not_found(app, mock_storage):
-    mock_storage.add_booking.side_effect = NotFoundError("Tee time slot does not exist")
-    
-    with pytest.raises(NotFoundError):
-        app.book(date(2026, 9, 19), "07:00", "mem_non_existent")
+# --- Reserved Slots & Clock Helpers ---
+
+def test_list_reserved_splits_upcoming_and_past(app, mock_store):
+    now = datetime(2026, 9, 19, 10, 0, tzinfo=timezone.utc)
+    past_slot = TeeTimeData(date="2026-09-19", time="07:00", players=())
+    upcoming_slot = TeeTimeData(date="2026-09-19", time="12:00", players=())
+    mock_store.list_booked.return_value = [past_slot, upcoming_slot]
+
+    upcoming, past = app.list_reserved(now=now)
+    assert len(upcoming) == 1
+    assert len(past) == 1
+    assert upcoming[0].time == "12:00"
+    assert past[0].time == "07:00"
 
 
-def test_book_tee_time_full_or_already_booked(app, mock_storage):
-    mock_storage.add_booking.side_effect = ValidationError("Member already booked or slot full")
-    
-    with pytest.raises(ValidationError):
-        app.book(date(2026, 9, 19), "07:00", "mem_101")
+def test_club_now_default():
+    current = club_now(None)
+    assert isinstance(current, datetime)
