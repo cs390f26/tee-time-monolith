@@ -24,18 +24,45 @@ The editable install (`package_dir={"": "src"}` in `setup.py`) is what makes `im
 
 ## Database
 
+Install MySQL and start it (Homebrew on macOS):
+
+```bash
+brew install mysql
+brew services start mysql
+```
+
+Create the application database, a separate database for pytest, and a user. The app connects to `127.0.0.1` over TCP, so that account is separate from `localhost`:
+
+```bash
+mysql -u root <<'EOF'
+CREATE DATABASE IF NOT EXISTS tee_time;
+CREATE DATABASE IF NOT EXISTS tee_time_test;
+CREATE USER IF NOT EXISTS 'tee_time'@'localhost' IDENTIFIED BY 'tee_time';
+CREATE USER IF NOT EXISTS 'tee_time'@'127.0.0.1' IDENTIFIED BY 'tee_time';
+GRANT ALL PRIVILEGES ON tee_time.* TO 'tee_time'@'localhost';
+GRANT ALL PRIVILEGES ON tee_time.* TO 'tee_time'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON tee_time_test.* TO 'tee_time'@'localhost';
+GRANT ALL PRIVILEGES ON tee_time_test.* TO 'tee_time'@'127.0.0.1';
+FLUSH PRIVILEGES;
+EOF
+```
+
 Create a gitignored `.env` in the repo root:
 
 ```
-DATABASE_PATH=club.sqlite
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=tee_time
+MYSQL_PASSWORD=tee_time
+MYSQL_DATABASE=tee_time
 ```
 
-`ensure_settings()` in `src/tee_time/settings.py` loads that file and exits if `DATABASE_PATH` is missing. A relative path is resolved from the working directory, so start the app from the repo root. `*.sqlite` is gitignored.
+`ensure_settings()` in `src/tee_time/settings.py` loads that file and exits if `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, or `MYSQL_DATABASE` is missing. `MYSQL_PORT` defaults to 3306.
 
-On startup, `launch()` in `src/tee_time/app.py` calls `ClubStorage.create_schema()`, which applies only the `CREATE TABLE` statements from `scripts/schema.sql` as `CREATE TABLE IF NOT EXISTS`. It does not run the `DROP TABLE` lines, so starting the app does not wipe an existing file. To rebuild an empty database (this drops the tables):
+On startup, `launch()` in `src/tee_time/app.py` calls `ClubStorage.create_schema()`, which applies only the `CREATE TABLE` statements from `scripts/schema.sql` as `CREATE TABLE IF NOT EXISTS`. It does not run the `DROP TABLE` lines, so starting the app does not wipe an existing database. To rebuild an empty database (this drops the tables):
 
 ```bash
-sqlite3 club.sqlite < scripts/schema.sql
+mysql -u tee_time -ptee_time tee_time < scripts/schema.sql
 ```
 
 ## Seed
@@ -43,17 +70,17 @@ sqlite3 club.sqlite < scripts/schema.sql
 After the tables exist, load `scripts/seed-data.sql` (twelve members, slots for Sep 14–20 2026, and bookings):
 
 ```bash
-sqlite3 club.sqlite < scripts/seed-data.sql
+mysql -u tee_time -ptee_time tee_time < scripts/seed-data.sql
 ```
 
 Running the inserts twice fails on primary keys. Reset by applying `schema.sql` (drops tables) and then `seed-data.sql` again:
 
 ```bash
-sqlite3 club.sqlite < scripts/schema.sql
-sqlite3 club.sqlite < scripts/seed-data.sql
+mysql -u tee_time -ptee_time tee_time < scripts/schema.sql
+mysql -u tee_time -ptee_time tee_time < scripts/seed-data.sql
 ```
 
-The running app reads SQLite. `data/sample-data.json` is the same roster in JSON and is not loaded at startup.
+The running app reads MySQL. `data/sample-data.json` is the same roster in JSON and is not loaded at startup. Unit tests use the `tee_time_test` database and leave `tee_time` alone.
 
 ## Run
 

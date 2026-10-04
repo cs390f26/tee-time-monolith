@@ -16,11 +16,13 @@ set -euo pipefail
 # USERNAME. DO NOT CHANGE THE REPOSITORY NAME (tee-time-monolith).
 ##############################################################################
 ##############################################################################
-REPO_URL="https://github.com/YOUR_GITHUB_USERNAME/tee-time-monolith.git"
+REPO_URL="https://github.com/cs390f26/tee-time-monolith.git"
 
 APP_DIR=/home/ec2-user/tee-time-monolith
 
-yum install -y python3.12 git sqlite
+yum install -y python3.12 git mariadb105-server
+
+systemctl enable --now mariadb
 
 git clone "$REPO_URL" "$APP_DIR"
 cd "$APP_DIR"
@@ -32,16 +34,29 @@ python3.12 -m venv .venv
 .venv/bin/pip install -e .
 
 cat > "$APP_DIR/.env" <<'EOF'
-DATABASE_PATH=club.sqlite
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=tee_time
+MYSQL_PASSWORD=tee_time
+MYSQL_DATABASE=tee_time
 EOF
 
 # This script runs as root, but the app runs as ec2-user. Change ownership
 # to ec2-user for all files created in the previous steps, then create the
-# SQLite file as that user.
+# database as that user.
 chown -R ec2-user:ec2-user "$APP_DIR"
 
-sudo -u ec2-user sqlite3 "$APP_DIR/club.sqlite" < "$APP_DIR/scripts/schema.sql"
-sudo -u ec2-user sqlite3 "$APP_DIR/club.sqlite" < "$APP_DIR/scripts/seed-data.sql"
+mysql <<'EOF'
+CREATE DATABASE IF NOT EXISTS tee_time;
+CREATE USER IF NOT EXISTS 'tee_time'@'localhost' IDENTIFIED BY 'tee_time';
+CREATE USER IF NOT EXISTS 'tee_time'@'127.0.0.1' IDENTIFIED BY 'tee_time';
+GRANT ALL PRIVILEGES ON tee_time.* TO 'tee_time'@'localhost';
+GRANT ALL PRIVILEGES ON tee_time.* TO 'tee_time'@'127.0.0.1';
+FLUSH PRIVILEGES;
+EOF
+
+mysql -u tee_time -ptee_time tee_time < "$APP_DIR/scripts/schema.sql"
+mysql -u tee_time -ptee_time tee_time < "$APP_DIR/scripts/seed-data.sql"
 
 cp deploy/tee-time.service /etc/systemd/system/
 systemctl daemon-reload

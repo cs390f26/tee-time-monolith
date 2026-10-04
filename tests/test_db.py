@@ -1,4 +1,5 @@
 from datetime import date
+
 import pytest
 
 from tee_time.db import (
@@ -16,11 +17,9 @@ def test_ping_and_schema_creation(temp_db):
     temp_db.ping()
 
 
-def test_ping_raises_when_table_missing(tmp_path):
-    empty_db_path = tmp_path / "empty.db"
-    storage = ClubStorage(str(empty_db_path))
+def test_ping_raises_when_table_missing(empty_db):
     with pytest.raises(DatabaseUnavailableError):
-        storage.ping()
+        empty_db.ping()
 
 
 def test_add_and_get_member(temp_db):
@@ -130,9 +129,14 @@ def test_add_player_foursome_full(temp_db):
         )
 
 
-def test_database_unavailable_error_handling(tmp_path):
-    invalid_dir = tmp_path / "invalid_path" / "db.sqlite"
-    bad_storage = ClubStorage(str(invalid_dir))
-    
+def test_database_unavailable_error_handling():
+    bad_storage = ClubStorage(
+        host="127.0.0.1",
+        port=1,
+        user="tee_time",
+        password="tee_time",
+        database="tee_time",
+    )
+
     with pytest.raises(DatabaseUnavailableError):
         bad_storage.list_members()

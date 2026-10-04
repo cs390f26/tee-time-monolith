@@ -1,6 +1,6 @@
 """In-memory ClubStore.
 
-Data lasts for this process only. The SQLite store will replace this object
+Data lasts for this process only. The MySQL store will replace this object
 and keep the same methods. launch() starts with no members and no tee times.
 """
 

@@ -1,7 +1,7 @@
 """Storage contract for members and tee times.
 
-ClubStorage in db.py implements this against SQLite. This module does not
-import sqlite3. Callers in the application layer translate these errors
+ClubStorage in db.py implements this against MySQL. This module does not
+import pymysql. Callers in the application layer translate these errors
 into domain errors.
 """
 

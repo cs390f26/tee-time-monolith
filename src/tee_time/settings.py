@@ -1,17 +1,25 @@
-"""Load .env and require the SQLite database path."""
+"""Load .env and require the MySQL connection settings."""
 
 import os
 
 from dotenv import load_dotenv
 
-REQUIRED_SETTINGS = ("DATABASE_PATH",)
+REQUIRED_SETTINGS = (
+    "MYSQL_HOST",
+    "MYSQL_USER",
+    "MYSQL_PASSWORD",
+    "MYSQL_DATABASE",
+)
+DEFAULT_PORT = "3306"
 
 
 def ensure_settings() -> dict[str, str]:
-    """Load .env (if present) and require DATABASE_PATH.
+    """Load .env (if present) and require the MySQL connection settings.
 
-    Returns a dict of the required values. If this returns, every key in
-    REQUIRED_SETTINGS is set in the environment (and in the returned dict).
+    MYSQL_PORT defaults to 3306 when it is omitted.
+
+    Returns a dict of MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD,
+    and MYSQL_DATABASE. If this returns, every required setting is set.
 
     Raises RuntimeError if any required setting is missing.
     """
@@ -22,4 +30,10 @@ def ensure_settings() -> dict[str, str]:
             "Missing required settings in the environment / .env: "
             + ", ".join(missing)
         )
-    return {name: os.environ[name] for name in REQUIRED_SETTINGS}
+    return {
+        "MYSQL_HOST": os.environ["MYSQL_HOST"],
+        "MYSQL_PORT": os.environ.get("MYSQL_PORT") or DEFAULT_PORT,
+        "MYSQL_USER": os.environ["MYSQL_USER"],
+        "MYSQL_PASSWORD": os.environ["MYSQL_PASSWORD"],
+        "MYSQL_DATABASE": os.environ["MYSQL_DATABASE"],
+    }

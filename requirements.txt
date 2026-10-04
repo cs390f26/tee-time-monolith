@@ -1,5 +1,6 @@
 flask
 gunicorn
+PyMySQL
 pytest
 pytest-playwright
 python-dotenv

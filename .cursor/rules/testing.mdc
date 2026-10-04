@@ -1,5 +1,5 @@
 ---
-description: Unit tests (SQLite) vs Playwright acceptance tests, matching voting_monolith's split
+description: Unit tests (MySQL) vs Playwright acceptance tests, matching voting_monolith's split
 globs: tests/**/*.py,tests_ui/**/*.py
 alwaysApply: false
 ---
@@ -10,8 +10,8 @@ alwaysApply: false
 
 ## Unit (`tests/`)
 
-Use a temporary SQLite file, not a running database server. Fixtures in `tests/conftest.py`: `tmp_path` → `ClubStorage` → `create_schema()`. API tests: `create_app(TeeTimeApp(store)).test_client()`. Cover health (200 vs 503), listing tee times, listing/adding members, empty lists, validation 400s, missing ids 404s.
+Use a running MySQL server and the `tee_time_test` database, not the `tee_time` database from `.env`. Fixtures in `tests/conftest.py` drop and recreate the tables, then call `ClubStorage.create_schema()`. API tests: `create_app(TeeTimeApp(store)).test_client()`. Cover health (200 vs 503), listing tee times, listing/adding members, empty lists, validation 400s, missing ids 404s.
 
 ## Acceptance (`tests_ui/`)
 
-Playwright against the **already running** app at `http://127.0.0.1:5000`. Do not start Flask from pytest. On session start, hit `/health` and `pytest.exit` if it is not 200. Use the SQLite file from `.env`; fixtures `clear_all()` then seed. Drive the times page and the members page (view + add). Run: database created, `python -m tee_time.app`, then `pytest tests_ui`.
+Playwright against the **already running** app at `http://127.0.0.1:5000`. Do not start Flask from pytest. On session start, hit `/health` and `pytest.exit` if it is not 200. Use the MySQL database from `.env`; fixtures `clear_all()` then seed. Drive the times page and the members page (view + add). Run: database created, `python -m tee_time.app`, then `pytest tests_ui`.

@@ -1,6 +1,6 @@
 # Deploy on EC2
 
-This document explains how to run the tee-time app on an EC2 instance. Gunicorn serves the Flask app on port 80. SQLite is a file on the instance (`DATABASE_PATH` in `.env`).
+This document explains how to run the tee-time app on an EC2 instance. Gunicorn serves the Flask app on port 80. MariaDB (the MySQL-compatible server in the Amazon Linux repos) runs on the same instance. The app connects with the `MYSQL_*` settings in `.env`.
 
 
 ## One-Time Setup
@@ -37,7 +37,7 @@ The steps necessary to deploy are:
 * Install necessary packages
 * Clone the repo
 * Set up the `.venv` and install the app (`pip install -r requirements.txt` and `pip install -e .`)
-* Write `.env` with `DATABASE_PATH=club.sqlite`
+* Write `.env` with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`
 * Load `scripts/schema.sql` and `scripts/seed-data.sql`
 * Install the gunicorn systemd unit
 * Start gunicorn
@@ -55,12 +55,12 @@ In the Launch dialog:
 * Paste the contents of `deploy/userdata.sh` into **User data**
 
 
-When you launch the instance, AWS will boot the instance, and then run the userdata script. This will take a minute or two. Once it completes, gunicorn is listening on port 80 and `club.sqlite` is seeded.
+When you launch the instance, AWS will boot the instance, and then run the userdata script. This will take a minute or two. Once it completes, MariaDB is running, the `tee_time` database is seeded, and gunicorn is listening on port 80.
 
 
 ## Other Useful Commands on the EC2 Instance
 
 - `systemctl status tee-time` — see the status of the Gunicorn process
-- `curl -s http://localhost/health` — call `/health`, which returns 200 when the web server is running and it can open the SQLite file
+- `curl -s http://localhost/health` — call `/health`, which returns 200 when the web server is running and it can reach MySQL
 - `sudo systemctl restart tee-time` — restart the web process after a config or code change
 - `sudo journalctl -u tee-time -f` — follow the gunicorn logs

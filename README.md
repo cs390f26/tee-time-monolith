@@ -11,6 +11,6 @@ A scheduling app for booking a tee time at a club. Members and non-members can b
 ## Documentation
 
 * [Development](docs/development.md) Virtual environment, install, database, seed, and how to run the app.
-* [Deploy on EC2](docs/deploy-ec2.md) Launch the app with gunicorn and a SQLite file on an EC2 instance.
+* [Deploy on EC2](docs/deploy-ec2.md) Launch the app with gunicorn and MySQL on an EC2 instance.
 
 ## Quick Start

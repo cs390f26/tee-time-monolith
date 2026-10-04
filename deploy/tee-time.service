@@ -1,7 +1,7 @@
 [Unit]
 Description=Tee Time app (gunicorn)
-After=network-online.target
-Wants=network-online.target
+After=network-online.target mariadb.service
+Wants=network-online.target mariadb.service
 
 [Service]
 Type=simple

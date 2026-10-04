@@ -1,12 +1,15 @@
-"""SQLite storage for members and tee times.
+"""MySQL storage for members and tee times.
 
-Maps rows to MemberData and TeeTimeData. sqlite3 errors become storage
-exceptions so the application layer does not import sqlite3.
+Maps rows to MemberData and TeeTimeData. PyMySQL errors become storage
+exceptions so the application layer does not import pymysql.
 """
 
-import sqlite3
-from datetime import date
+from contextlib import contextmanager
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
+
+import pymysql
+import pymysql.cursors
 
 from tee_time.store import (
     DatabaseUnavailableError,
@@ -18,51 +21,72 @@ from tee_time.store import (
 from tee_time.types import MAX_PLAYERS, MemberData, PlayerData, TeeTimeData
 
 _SCHEMA = Path(__file__).resolve().parents[2] / "scripts" / "schema.sql"
+_CONNECT_TIMEOUT = 5
+_DUPLICATE_KEY = 1062
+_CHECK_VIOLATION = {3819, 4025}
 
 
 class ClubStorage:
-    """ClubStore backed by a SQLite file."""
+    """ClubStore backed by a MySQL database."""
 
-    def __init__(self, path: str):
-        self._path = path
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        port: int = 3306,
+    ):
+        self._host = host
+        self._port = port
+        self._user = user
+        self._password = password
+        self._database = database
 
     def create_schema(self) -> None:
         """Create members, tee times, and bookings if they are not there yet."""
         try:
-            with self._connect() as conn:
+            with self._session() as conn, conn.cursor() as cursor:
                 for statement in create_table_statements():
-                    conn.execute(statement)
-        except sqlite3.Error as exc:
+                    cursor.execute(statement)
+        except pymysql.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
 
     def ping(self) -> None:
-        """Raise DatabaseUnavailableError when the file or members table is missing."""
+        """Raise DatabaseUnavailableError when the server or members table is missing."""
         try:
-            with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'members'"
-                ).fetchone()
-        except sqlite3.Error as exc:
+            with self._session() as conn:
+                row = fetchone(
+                    conn,
+                    """
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = DATABASE() AND table_name = 'members'
+                    """,
+                    (),
+                )
+        except pymysql.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
         if row is None:
             raise DatabaseUnavailableError("members table missing")
 
     def list_members(self) -> list[MemberData]:
         try:
-            with self._connect() as conn:
-                rows = conn.execute("SELECT id, name, phone FROM members").fetchall()
-        except sqlite3.Error as exc:
+            with self._session() as conn:
+                rows = fetchall(conn, "SELECT id, name, phone FROM members", ())
+        except pymysql.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
         return [member_from_row(row) for row in rows]
 
     def get_member(self, member_id: str) -> MemberData | None:
         try:
-            with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT id, name, phone FROM members WHERE id = ?",
+            with self._session() as conn:
+                row = fetchone(
+                    conn,
+                    "SELECT id, name, phone FROM members WHERE id = %s",
                     (member_id,),
-                ).fetchone()
-        except sqlite3.Error as exc:
+                )
+        except pymysql.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
         if row is None:
             return None
@@ -70,14 +94,15 @@ class ClubStorage:
 
     def add_member(self, member: MemberData) -> None:
         try:
-            with self._connect() as conn:
-                conn.execute(
-                    "INSERT INTO members (id, name, phone) VALUES (?, ?, ?)",
+            with self._session() as conn:
+                execute(
+                    conn,
+                    "INSERT INTO members (id, name, phone) VALUES (%s, %s, %s)",
                     (member.id, member.name, member.phone),
                 )
-        except sqlite3.IntegrityError as exc:
+        except pymysql.IntegrityError as exc:
             raise MemberAlreadyExistsError(f"member {member.id} already exists") from exc
-        except sqlite3.Error as exc:
+        except pymysql.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
 
     def list_tee_times(self, day: date) -> list[TeeTimeData]:
@@ -94,7 +119,7 @@ class ClubStorage:
             """
             SELECT id, slot_date, slot_time
             FROM tee_times
-            WHERE slot_date = ?
+            WHERE slot_date = %s
             ORDER BY slot_time
             """,
             (day.isoformat(),),
@@ -105,7 +130,7 @@ class ClubStorage:
             """
             SELECT id, slot_date, slot_time
             FROM tee_times
-            WHERE slot_date = ? AND substr(slot_time, 1, 5) = ?
+            WHERE slot_date = %s AND LEFT(slot_time, 5) = %s
             """,
             (day.isoformat(), hour_and_minute(slot_time)),
         )
@@ -130,19 +155,21 @@ class ClubStorage:
         conn = self._connect()
         try:
             # One transaction so the seat check and the insert cannot interleave.
-            conn.execute("BEGIN IMMEDIATE")
+            conn.begin()
             tee_time_id = find_or_create_tee_time(conn, day_text, hhmm)
-            reject_closed_seat(players_for(conn, tee_time_id), player)
+            reject_closed_seat(players_for(conn, tee_time_id, lock=True), player)
             insert_booking(conn, tee_time_id, player)
             conn.commit()
         except (SlotFullError, PlayerAlreadyBookedError, PositionTakenError):
             conn.rollback()
             raise
-        except sqlite3.IntegrityError as exc:
+        except pymysql.IntegrityError as exc:
             conn.rollback()
             raise storage_error(exc) from exc
-        except sqlite3.Error as exc:
+        except pymysql.Error as exc:
             conn.rollback()
+            if is_check_violation(exc):
+                raise PositionTakenError(str(exc)) from exc
             raise DatabaseUnavailableError("database not reachable") from exc
         finally:
             conn.close()
@@ -153,20 +180,39 @@ class ClubStorage:
 
     def _load_tee_times(self, sql: str, params: tuple) -> list[TeeTimeData]:
         try:
-            with self._connect() as conn:
-                rows = conn.execute(sql, params).fetchall()
+            with self._session() as conn:
+                rows = fetchall(conn, sql, params)
                 return [tee_time_from_row(conn, row) for row in rows]
-        except sqlite3.Error as exc:
+        except pymysql.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
 
-    def _connect(self) -> sqlite3.Connection:
+    def _connect(self) -> pymysql.connections.Connection:
         try:
-            conn = sqlite3.connect(self._path)
-        except sqlite3.Error as exc:
+            return pymysql.connect(
+                host=self._host,
+                port=self._port,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=pymysql.cursors.DictCursor,
+                autocommit=False,
+                connect_timeout=_CONNECT_TIMEOUT,
+            )
+        except pymysql.Error as exc:
             raise DatabaseUnavailableError("database not reachable") from exc
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+
+    @contextmanager
+    def _session(self):
+        conn = self._connect()
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
 
 def create_table_statements() -> list[str]:
@@ -184,29 +230,33 @@ def create_table_statements() -> list[str]:
     return statements
 
 
-def member_from_row(row: sqlite3.Row) -> MemberData:
+def member_from_row(row: dict) -> MemberData:
     return MemberData(id=row["id"], name=row["name"], phone=row["phone"])
 
 
-def tee_time_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> TeeTimeData:
+def tee_time_from_row(conn: pymysql.connections.Connection, row: dict) -> TeeTimeData:
     return TeeTimeData(
-        date=row["slot_date"],
-        time=hour_and_minute(row["slot_time"]),
+        date=as_date_text(row["slot_date"]),
+        time=as_hhmm(row["slot_time"]),
         players=tuple(players_for(conn, row["id"])),
     )
 
 
-def players_for(conn: sqlite3.Connection, tee_time_id: int) -> list[PlayerData]:
-    rows = conn.execute(
-        """
+def players_for(
+    conn: pymysql.connections.Connection,
+    tee_time_id: int,
+    lock: bool = False,
+) -> list[PlayerData]:
+    sql = """
         SELECT b.player_position, b.member_id, m.name
         FROM bookings b
         JOIN members m ON m.id = b.member_id
-        WHERE b.tee_time_id = ?
+        WHERE b.tee_time_id = %s
         ORDER BY b.player_position
-        """,
-        (tee_time_id,),
-    ).fetchall()
+    """
+    if lock:
+        sql += " FOR UPDATE"
+    rows = fetchall(conn, sql, (tee_time_id,))
     return [
         PlayerData(
             number=row["player_position"],
@@ -217,21 +267,37 @@ def players_for(conn: sqlite3.Connection, tee_time_id: int) -> list[PlayerData]:
     ]
 
 
-def find_or_create_tee_time(conn: sqlite3.Connection, day_text: str, hhmm: str) -> int:
-    row = conn.execute(
-        """
-        SELECT id FROM tee_times
-        WHERE slot_date = ? AND substr(slot_time, 1, 5) = ?
-        """,
-        (day_text, hhmm),
-    ).fetchone()
+def find_or_create_tee_time(
+    conn: pymysql.connections.Connection, day_text: str, hhmm: str
+) -> int:
+    row = locked_tee_time(conn, day_text, hhmm)
     if row is not None:
         return row["id"]
-    cursor = conn.execute(
-        "INSERT INTO tee_times (slot_date, slot_time) VALUES (?, ?)",
-        (day_text, f"{hhmm}:00"),
+    try:
+        return execute(
+            conn,
+            "INSERT INTO tee_times (slot_date, slot_time) VALUES (%s, %s)",
+            (day_text, f"{hhmm}:00"),
+        )
+    except pymysql.IntegrityError as exc:
+        if "uq_slot" not in str(exc):
+            raise
+        row = locked_tee_time(conn, day_text, hhmm)
+        if row is None:
+            raise
+        return row["id"]
+
+
+def locked_tee_time(conn: pymysql.connections.Connection, day_text: str, hhmm: str):
+    return fetchone(
+        conn,
+        """
+        SELECT id FROM tee_times
+        WHERE slot_date = %s AND LEFT(slot_time, 5) = %s
+        FOR UPDATE
+        """,
+        (day_text, hhmm),
     )
-    return cursor.lastrowid
 
 
 def reject_closed_seat(players: list[PlayerData], player: PlayerData) -> None:
@@ -245,11 +311,14 @@ def reject_closed_seat(players: list[PlayerData], player: PlayerData) -> None:
         raise PositionTakenError(f"player number {player.number} is taken")
 
 
-def insert_booking(conn: sqlite3.Connection, tee_time_id: int, player: PlayerData) -> None:
-    conn.execute(
+def insert_booking(
+    conn: pymysql.connections.Connection, tee_time_id: int, player: PlayerData
+) -> None:
+    execute(
+        conn,
         """
         INSERT INTO bookings (tee_time_id, member_id, player_position)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
         """,
         (tee_time_id, player.member_id, player.number),
     )
@@ -260,12 +329,60 @@ def hour_and_minute(value: str) -> str:
     return value[:5]
 
 
-def storage_error(exc: sqlite3.IntegrityError) -> Exception:
+def as_date_text(value) -> str:
+    """DATE columns come back as date objects. The app uses YYYY-MM-DD text."""
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)[:10]
+
+
+def as_hhmm(value) -> str:
+    """TIME columns come back as timedeltas. The app uses HH:MM text."""
+    if isinstance(value, timedelta):
+        total = int(value.total_seconds())
+        hours, rem = divmod(total, 3600)
+        minutes = rem // 60
+        return f"{hours:02d}:{minutes:02d}"
+    if isinstance(value, time):
+        return value.strftime("%H:%M")
+    return str(value)[:5]
+
+
+def storage_error(exc: pymysql.IntegrityError) -> Exception:
+    code = exc.args[0] if exc.args else None
     message = str(exc)
-    if "members.id" in message:
-        return MemberAlreadyExistsError(message)
-    if "member_id" in message:
-        return PlayerAlreadyBookedError("already booked on this slot")
-    if "player_position" in message or "CHECK constraint" in message:
+    if code in _CHECK_VIOLATION or "chk_player_position" in message:
         return PositionTakenError(message)
+    if code == _DUPLICATE_KEY:
+        if "uq_booking_member" in message:
+            return PlayerAlreadyBookedError("already booked on this slot")
+        if "uq_booking_position" in message:
+            return PositionTakenError(message)
+        if "PRIMARY" in message:
+            return MemberAlreadyExistsError(message)
     return DatabaseUnavailableError("database not reachable")
+
+
+def is_check_violation(exc: pymysql.Error) -> bool:
+    code = exc.args[0] if exc.args else None
+    return code in _CHECK_VIOLATION or "chk_player_position" in str(exc)
+
+
+def fetchall(conn: pymysql.connections.Connection, sql: str, params: tuple) -> list:
+    with conn.cursor() as cursor:
+        cursor.execute(sql, params)
+        return list(cursor.fetchall())
+
+
+def fetchone(conn: pymysql.connections.Connection, sql: str, params: tuple):
+    with conn.cursor() as cursor:
+        cursor.execute(sql, params)
+        return cursor.fetchone()
+
+
+def execute(conn: pymysql.connections.Connection, sql: str, params: tuple) -> int:
+    with conn.cursor() as cursor:
+        cursor.execute(sql, params)
+        return cursor.lastrowid

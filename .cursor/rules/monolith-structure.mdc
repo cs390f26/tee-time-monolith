@@ -10,7 +10,7 @@ This is a **basic country club tee-time site**, not a full booking or payments p
 - **Available times** — list tee times members can see.
 - **Members** — view the member list and add a new member.
 
-Do not add extra features (auth, payments, waitlists, multi-course calendars) unless asked. Follow **voting_monolith** for how the Flask app is layered and run. Store data in a **SQLite** file on one machine. Do **not** add a React/Vite/Node frontend.
+Do not add extra features (auth, payments, waitlists, multi-course calendars) unless asked. Follow **voting_monolith** for how the Flask app is layered and run. Store data in **MySQL** on the same machine as the app. Do **not** add a React/Vite/Node frontend.
 
 Python package: `src/tee_time/` (import as `tee_time`). Editable install via `setup.py` with `package_dir={"": "src"}`.
 
@@ -21,8 +21,8 @@ docs/
 setup.py, requirements.txt
 ```
 
-Application rules, the SQLite file, tests, `scripts/`, and `config/` come later. Do not add those until asked.
+Application rules, the MySQL database, tests, `scripts/`, and `config/` come later. Do not add those until asked.
 
 **Run locally** (venv active): `pip install -r requirements.txt && pip install -e .` → `python -m tee_time.app` → http://127.0.0.1:5000/
 
-Lint: `ruff check src`. Stack: Python 3.12+, Flask, SQLite, gunicorn for deploy.
+Lint: `ruff check src`. Stack: Python 3.12+, Flask, MySQL, gunicorn for deploy.

@@ -242,15 +242,22 @@ def create_app(tee_time_app: TeeTimeApp) -> Flask:
 
 
 def launch() -> Flask:
-    """Build ClubStorage + TeeTimeApp + Flask from DATABASE_PATH."""
+    """Build ClubStorage + TeeTimeApp + Flask from the MySQL settings."""
     settings = ensure_settings()
-    storage = ClubStorage(settings["DATABASE_PATH"])
+    storage = ClubStorage(
+        host=settings["MYSQL_HOST"],
+        port=int(settings["MYSQL_PORT"]),
+        user=settings["MYSQL_USER"],
+        password=settings["MYSQL_PASSWORD"],
+        database=settings["MYSQL_DATABASE"],
+    )
     try:
         storage.create_schema()
         storage.ping()
     except DatabaseUnavailableError as exc:
         raise RuntimeError(
-            "Database not reachable. Check DATABASE_PATH in .env. "
+            "Database not reachable. Check MYSQL_HOST, MYSQL_USER, "
+            "MYSQL_PASSWORD, and MYSQL_DATABASE in .env. "
             f"Details: {exc}"
         ) from exc
     return create_app(TeeTimeApp(storage))
