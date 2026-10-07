@@ -10,12 +10,6 @@
 # Exit on error, undefined variable, or failure in a pipeline.
 set -euo pipefail
 
-##############################################################################
-##############################################################################
-# CHANGE REPO_URL BELOW: REPLACE YOUR_GITHUB_USERNAME WITH YOUR GITHUB
-# USERNAME. DO NOT CHANGE THE REPOSITORY NAME (tee-time-monolith).
-##############################################################################
-##############################################################################
 REPO_URL="https://github.com/cs390f26/tee-time-monolith.git"
 
 APP_DIR=/home/ec2-user/tee-time-monolith
