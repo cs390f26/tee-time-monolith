@@ -1,38 +1,11 @@
 # Deploy on EC2
 
-This document explains how to run the tee-time app on an EC2 instance. Gunicorn serves the Flask app on port 80. MariaDB (the MySQL-compatible server in the Amazon Linux repos) runs on the same instance. The app connects with the `MYSQL_*` settings in `.env`.
-
-
-## One-Time Setup
-
-The file `deploy/userdata.sh` is used in the deployment process, and you must change one line before you deploy.
-
-* Open `deploy/userdata.sh` in Cursor or `nano`.
-* Near the top of the file you will find the line:
-
-  ```
-  REPO_URL="https://github.com/YOUR_GITHUB_USERNAME/tee-time-monolith.git"
-  ```
-* Change `YOUR_GITHUB_USERNAME` to your Github username.
-* Commit this change to the git repo, and push it back to your Github account
-
-  ```
-  git add deploy/userdata.sh
-  git commit -m "set github account"
-  git push origin main
-  ```
-
-
-If the `git push` command fails, check the url of `origin` and make sure it points at your fork of the repo
-
-  ```
-  git remote -v
-  ```
+This document explains how to run the tee-time app on an EC2 instance. Gunicorn serves the Flask app on port 80. MariaDB (the MySQL-compatible server in the Amazon Linux 2023 repos) runs on the same instance. The app connects with the `MYSQL_*` settings in `.env`.
 
 
 ## Deploy Process
 
-The steps necessary to deploy are:
+The script `deploy/userdata.sh` does the instance setup:
 
 * Install necessary packages
 * Clone the repo
@@ -42,20 +15,21 @@ The steps necessary to deploy are:
 * Install the gunicorn systemd unit
 * Start gunicorn
 
-
-The script `deploy/userdata.sh` contains all these steps, and we can tell EC2 to run these commands at launch by putting the contents of this script in the [Cloud-init](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#userdata-linux) user data field of the EC2 launch wizard.
+Tell EC2 to run those commands at launch by putting the contents of `deploy/userdata.sh` in the [Cloud-init](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#userdata-linux) user data field of the EC2 launch wizard.
 
 In the Launch dialog:
 
 * (Optional, but encouraged) Name the instance "Tee Time app"
-* Use the default `t3.micro` instance type
-* Select your `vockey` for authentication
+* Choose the **Amazon Linux 2023** AMI
+* Use the `t3.micro` instance type
+* Select the `vockey` key pair
 * Ensure that HTTP and SSH are enabled in the security group
-* Open the "Advanced" tab, and scroll to the bottom.
+* Open the "Advanced" tab, and scroll to the bottom
 * Paste the contents of `deploy/userdata.sh` into **User data**
 
+When you launch the instance, AWS boots it and then runs the userdata script. This takes a minute or two. Once it completes, MariaDB is running, the `tee_time` database is seeded, and gunicorn is listening on port 80.
 
-When you launch the instance, AWS will boot the instance, and then run the userdata script. This will take a minute or two. Once it completes, MariaDB is running, the `tee_time` database is seeded, and gunicorn is listening on port 80.
+From your own machine, with no SSH session, open `http://<public-ip>/health`. It should return `{"status":"ok"}`.
 
 
 ## Other Useful Commands on the EC2 Instance
