@@ -1,15 +1,21 @@
+import runpy
+import sys
 from datetime import date
+from pathlib import Path
 from unittest.mock import MagicMock
+
 import pytest
 
 from tee_time.app import (
     RequestError,
     create_app,
+    launch,
     parse_day,
     parse_member_id,
     parse_new_member,
     parse_slot_id,
 )
+from tee_time.db import DatabaseUnavailableError
 from tee_time.tee_time import NotFoundError, ServiceUnavailableError, ValidationError
 from tee_time.types import MemberView, PlayerData, TeeTimeSlot, TeeTimeView
 
@@ -291,3 +297,75 @@ def test_add_booking_unavailable(client, mock_tee_time_app):
     mock_tee_time_app.book.side_effect = ServiceUnavailableError()
     res = client.post("/tee-times/2026-09-19T07:00:00/bookings", json={"memberId": "m1"})
     assert res.status_code == 503
+
+
+_SETTINGS = {
+    "MYSQL_HOST": "127.0.0.1",
+    "MYSQL_PORT": "3306",
+    "MYSQL_USER": "tee_time",
+    "MYSQL_PASSWORD": "tee_time",
+    "MYSQL_DATABASE": "tee_time_test",
+}
+
+
+def test_launch_creates_the_schema_pings_mysql_and_returns_the_flask_app(monkeypatch):
+    storage = MagicMock()
+    flask_app = MagicMock()
+    monkeypatch.setattr("tee_time.app.ensure_settings", lambda: _SETTINGS)
+    monkeypatch.setattr("tee_time.app.ClubStorage", MagicMock(return_value=storage))
+    monkeypatch.setattr("tee_time.app.create_app", lambda app_logic: flask_app)
+
+    assert launch() is flask_app
+    storage.create_schema.assert_called_once()
+    storage.ping.assert_called_once()
+
+
+def test_launch_raises_runtime_error_when_create_schema_cannot_reach_mysql(monkeypatch):
+    storage = MagicMock()
+    storage.create_schema.side_effect = DatabaseUnavailableError("down")
+    monkeypatch.setattr("tee_time.app.ensure_settings", lambda: _SETTINGS)
+    monkeypatch.setattr("tee_time.app.ClubStorage", MagicMock(return_value=storage))
+
+    with pytest.raises(RuntimeError, match="Database not reachable"):
+        launch()
+
+
+def test_running_app_as_main_starts_flask_in_debug_mode_on_port_5000(monkeypatch):
+    storage = MagicMock()
+    started = {}
+
+    def fake_run(self, debug=False, port=None, **kwargs):
+        started["debug"] = debug
+        started["port"] = port
+
+    monkeypatch.setattr("tee_time.settings.ensure_settings", lambda: _SETTINGS)
+    monkeypatch.setattr("tee_time.db.ClubStorage", MagicMock(return_value=storage))
+    monkeypatch.setattr("flask.Flask.run", fake_run)
+    _run_app_as_main()
+    storage.create_schema.assert_called_once()
+    storage.ping.assert_called_once()
+    assert started == {"debug": True, "port": 5000}
+
+
+def test_running_app_as_main_exits_1_and_prints_the_error_when_mysql_is_down(
+    monkeypatch, capsys
+):
+    storage = MagicMock()
+    storage.ping.side_effect = DatabaseUnavailableError("down")
+    monkeypatch.setattr("tee_time.settings.ensure_settings", lambda: _SETTINGS)
+    monkeypatch.setattr("tee_time.db.ClubStorage", MagicMock(return_value=storage))
+
+    with pytest.raises(SystemExit) as caught:
+        _run_app_as_main()
+    assert caught.value.code == 1
+    assert "Database not reachable" in capsys.readouterr().err
+
+
+def _run_app_as_main():
+    previous = sys.modules.get("__main__")
+    app_path = Path(__file__).resolve().parents[1] / "src" / "tee_time" / "app.py"
+    try:
+        runpy.run_path(str(app_path), run_name="__main__")
+    finally:
+        if previous is not None:
+            sys.modules["__main__"] = previous

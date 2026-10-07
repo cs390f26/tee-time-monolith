@@ -1,15 +1,26 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from unittest.mock import MagicMock, patch
+
 import pymysql
 import pytest
 
-from tee_time.db import ClubStorage, execute, fetchall, fetchone
+from tee_time.db import (
+    as_date_text,
+    as_hhmm,
+    execute,
+    fetchall,
+    fetchone,
+    find_or_create_tee_time,
+    is_check_violation,
+    storage_error,
+)
 from tee_time.store import (
     DatabaseUnavailableError,
     MemberAlreadyExistsError,
+    PlayerAlreadyBookedError,
+    PositionTakenError,
 )
 from tee_time.types import MemberData, PlayerData
-
 
 # --- Health & Setup Tests ---
 
@@ -205,3 +216,209 @@ def test_close_storage_connection(storage):
         storage._conn = mock_conn
         storage.close()
         assert storage._conn is None or mock_conn.close.called
+
+
+def test_list_members_raises_database_unavailable_when_the_query_fails(
+    storage, mock_db_session
+):
+    with (
+        patch("tee_time.db.fetchall", side_effect=pymysql.Error("down")),
+        pytest.raises(DatabaseUnavailableError),
+    ):
+        storage.list_members()
+
+
+def test_get_member_raises_database_unavailable_when_the_query_fails(
+    storage, mock_db_session
+):
+    with (
+        patch("tee_time.db.fetchone", side_effect=pymysql.Error("down")),
+        pytest.raises(DatabaseUnavailableError),
+    ):
+        storage.get_member("m1")
+
+
+def test_add_member_raises_database_unavailable_when_the_insert_fails(
+    storage, mock_db_session
+):
+    member = MemberData(id="m1", name="Ada", phone="555-0100")
+    with (
+        patch("tee_time.db.execute", side_effect=pymysql.Error("down")),
+        pytest.raises(DatabaseUnavailableError),
+    ):
+        storage.add_member(member)
+
+
+def test_list_tee_times_raises_database_unavailable_when_the_query_fails(
+    storage, mock_db_session
+):
+    with (
+        patch("tee_time.db.fetchall", side_effect=pymysql.Error("down")),
+        pytest.raises(DatabaseUnavailableError),
+    ):
+        storage.list_tee_times(date(2099, 6, 15))
+
+
+def test_list_booked_raises_database_unavailable_when_the_query_fails(
+    storage, mock_db_session
+):
+    with (
+        patch("tee_time.db.fetchall", side_effect=pymysql.Error("down")),
+        pytest.raises(DatabaseUnavailableError),
+    ):
+        storage.list_booked()
+
+
+def test_execute_returns_the_id_of_the_inserted_row(mock_db_session):
+    cursor = MagicMock()
+    cursor.lastrowid = 15
+    mock_db_session.cursor.return_value.__enter__.return_value = cursor
+    sql = "INSERT INTO tee_times (slot_date, slot_time) VALUES (%s, %s)"
+    assert execute(mock_db_session, sql, ()) == 15
+
+
+def test_session_commits_and_closes_the_connection_when_the_block_succeeds(storage):
+    conn = MagicMock()
+    with patch("pymysql.connect", return_value=conn), storage._session() as yielded:
+        assert yielded is conn
+    conn.commit.assert_called_once()
+    conn.close.assert_called_once()
+
+
+def test_as_date_text_formats_a_date_a_datetime_and_a_string_as_yyyy_mm_dd():
+    assert as_date_text(date(2099, 6, 15)) == "2099-06-15"
+    assert as_date_text(datetime(2099, 6, 15, 7, 0)) == "2099-06-15"
+    assert as_date_text("2099-06-15T07:00:00") == "2099-06-15"
+
+
+def test_as_hhmm_formats_a_time_a_timedelta_and_a_string_as_hh_mm():
+    assert as_hhmm(time(7, 30)) == "07:30"
+    assert as_hhmm(timedelta(hours=14, minutes=30)) == "14:30"
+    assert as_hhmm("08:00:00") == "08:00"
+
+
+@pytest.mark.parametrize(
+    ("exc", "expected"),
+    [
+        pytest.param(
+            pymysql.IntegrityError(3819, "chk_player_position"),
+            PositionTakenError,
+            id="check_constraint_3819_becomes_position_taken",
+        ),
+        pytest.param(
+            pymysql.IntegrityError(4025, "CHECK constraint failed"),
+            PositionTakenError,
+            id="check_constraint_4025_becomes_position_taken",
+        ),
+        pytest.param(
+            pymysql.IntegrityError(1062, "Duplicate entry for key 'uq_booking_member'"),
+            PlayerAlreadyBookedError,
+            id="duplicate_member_key_becomes_player_already_booked",
+        ),
+        pytest.param(
+            pymysql.IntegrityError(1062, "key uq_booking_position"),
+            PositionTakenError,
+            id="duplicate_position_key_becomes_position_taken",
+        ),
+        pytest.param(
+            pymysql.IntegrityError(1062, "Duplicate entry for key 'PRIMARY'"),
+            MemberAlreadyExistsError,
+            id="duplicate_primary_key_becomes_member_already_exists",
+        ),
+        pytest.param(
+            pymysql.IntegrityError(1452, "Cannot add or update a child row"),
+            DatabaseUnavailableError,
+            id="foreign_key_failure_becomes_database_unavailable",
+        ),
+        pytest.param(
+            pymysql.IntegrityError(9999, "chk_player_position"),
+            PositionTakenError,
+            id="chk_player_position_in_the_message_becomes_position_taken",
+        ),
+    ],
+)
+def test_storage_error_translates_a_mysql_integrity_error(exc, expected):
+    assert isinstance(storage_error(exc), expected)
+
+
+@pytest.mark.parametrize(
+    ("exc", "violation"),
+    [
+        pytest.param(
+            pymysql.OperationalError(3819, "no"),
+            True,
+            id="error_3819_is_a_check_violation",
+        ),
+        pytest.param(
+            pymysql.OperationalError(4025, "no"),
+            True,
+            id="error_4025_is_a_check_violation",
+        ),
+        pytest.param(
+            pymysql.OperationalError(1000, "chk_player_position"),
+            True,
+            id="chk_player_position_in_the_message_is_a_check_violation",
+        ),
+        pytest.param(
+            pymysql.OperationalError(2003, "down"),
+            False,
+            id="a_connection_error_is_not_a_check_violation",
+        ),
+        pytest.param(
+            pymysql.OperationalError(),
+            False,
+            id="an_error_with_no_code_is_not_a_check_violation",
+        ),
+    ],
+)
+def test_is_check_violation_matches_mysql_check_constraint_errors(exc, violation):
+    assert is_check_violation(exc) is violation
+
+
+def test_find_or_create_tee_time_returns_the_existing_row_id():
+    with patch("tee_time.db.locked_tee_time", return_value={"id": 4}):
+        assert find_or_create_tee_time(MagicMock(), "2099-06-15", "07:00") == 4
+
+
+def test_find_or_create_tee_time_inserts_date_and_hhmmss_when_no_row_exists():
+    with (
+        patch("tee_time.db.locked_tee_time", return_value=None),
+        patch("tee_time.db.execute", return_value=8) as insert_slot,
+    ):
+        assert find_or_create_tee_time(MagicMock(), "2099-06-15", "07:00") == 8
+    assert insert_slot.call_args.args[2] == ("2099-06-15", "07:00:00")
+
+
+def test_find_or_create_tee_time_returns_the_row_id_after_a_duplicate_uq_slot_insert():
+    with (
+        patch("tee_time.db.locked_tee_time", side_effect=[None, {"id": 9}]),
+        patch(
+            "tee_time.db.execute",
+            side_effect=pymysql.IntegrityError(1062, "Duplicate entry 'uq_slot'"),
+        ),
+    ):
+        assert find_or_create_tee_time(MagicMock(), "2099-06-15", "07:00") == 9
+
+
+def test_find_or_create_tee_time_reraises_an_integrity_error_that_is_not_uq_slot():
+    with (
+        patch("tee_time.db.locked_tee_time", return_value=None),
+        patch(
+            "tee_time.db.execute",
+            side_effect=pymysql.IntegrityError(1062, "Duplicate entry 'PRIMARY'"),
+        ),
+        pytest.raises(pymysql.IntegrityError),
+    ):
+        find_or_create_tee_time(MagicMock(), "2099-06-15", "07:00")
+
+
+def test_find_or_create_tee_time_reraises_uq_slot_when_the_row_is_still_missing():
+    with (
+        patch("tee_time.db.locked_tee_time", side_effect=[None, None]),
+        patch(
+            "tee_time.db.execute",
+            side_effect=pymysql.IntegrityError(1062, "Duplicate entry 'uq_slot'"),
+        ),
+        pytest.raises(pymysql.IntegrityError),
+    ):
+        find_or_create_tee_time(MagicMock(), "2099-06-15", "07:00")

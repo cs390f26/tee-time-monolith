@@ -1,8 +1,13 @@
+import os
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 from tee_time.app import create_app
 from tee_time.db import ClubStorage
+
+# Unit tests that talk to MySQL use this database, never the app database in .env.
+TEST_DATABASE = "tee_time_test"
 
 
 # --- Flask App Fixtures ---
@@ -46,3 +51,33 @@ def mock_db_session(storage):
         mock_conn = MagicMock()
         mock_session.return_value.__enter__.return_value = mock_conn
         yield mock_conn
+
+
+@pytest.fixture
+def club_storage():
+    """ClubStorage against tee_time_test, with empty tables for each test."""
+    storage = ClubStorage(
+        host=os.environ.get("MYSQL_HOST", "127.0.0.1"),
+        port=int(os.environ.get("MYSQL_PORT", "3306")),
+        user=os.environ.get("MYSQL_USER", "tee_time"),
+        password=os.environ.get("MYSQL_PASSWORD", "tee_time"),
+        database=TEST_DATABASE,
+    )
+    assert storage._database == TEST_DATABASE
+    reset_test_database(storage)
+    yield storage
+    reset_test_database(storage)
+
+
+def reset_test_database(storage: ClubStorage) -> None:
+    """Drop the club tables and create them again. Does not touch other databases."""
+    conn = storage._connect()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DROP TABLE IF EXISTS bookings")
+            cursor.execute("DROP TABLE IF EXISTS tee_times")
+            cursor.execute("DROP TABLE IF EXISTS members")
+        conn.commit()
+    finally:
+        conn.close()
+    storage.create_schema()

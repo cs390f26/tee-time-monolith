@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 from unittest.mock import MagicMock
+
 import pytest
 
 from tee_time.store import (
@@ -175,6 +176,43 @@ def test_save_player_storage_exceptions(app, mock_store, exception_cls, match):
 
 
 # --- Booking Validation Helpers ---
+
+def test_book_raises_foursome_full_and_does_not_save_when_four_players_are_booked(
+    app, mock_store
+):
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    players = tuple(
+        PlayerData(number=i, member_id=f"m{i}", name=f"P{i}") for i in range(1, 5)
+    )
+    mock_store.get_tee_time.return_value = TeeTimeData(
+        date="2026-09-19", time="07:00", players=players
+    )
+    mock_store.get_member.return_value = MemberData(
+        id="m9", name="New", phone="555-0109"
+    )
+
+    with pytest.raises(ValidationError, match="foursome full"):
+        app.book(date(2026, 9, 19), "07:00", "m9", now=now)
+    mock_store.add_player.assert_not_called()
+
+
+def test_book_raises_already_booked_and_does_not_save_when_the_member_is_playing(
+    app, mock_store
+):
+    now = datetime(2026, 9, 19, 6, 0, tzinfo=timezone.utc)
+    mock_store.get_tee_time.return_value = TeeTimeData(
+        date="2026-09-19",
+        time="07:00",
+        players=(PlayerData(number=1, member_id="m1", name="Alice"),),
+    )
+    mock_store.get_member.return_value = MemberData(
+        id="m1", name="Alice", phone="555-0100"
+    )
+
+    with pytest.raises(ValidationError, match="already booked on this slot"):
+        app.book(date(2026, 9, 19), "07:00", "m1", now=now)
+    mock_store.add_player.assert_not_called()
+
 
 def test_require_can_book_past_time():
     now = datetime(2026, 9, 19, 8, 0, tzinfo=timezone.utc)
