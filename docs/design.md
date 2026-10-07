@@ -152,16 +152,16 @@ TeeTimeView(
 
 ## Sample data
 
-`scripts/seed-data.sql` loads twelve members, tee times for Sep 14–20, 2026, and their bookings.
+`scripts/seed-data.sql` loads twelve members, tee times for Oct 7–13, 2026, and their bookings.
 
 | Use case | Rows |
 |----------|------|
 | List / add members | twelve `members` rows below |
-| Open (`0/4`) | `2026-09-14` `08:00:00`, no bookings |
-| One player | `2026-09-14` `08:10:00`, Thomas Langley |
-| Two players | `2026-09-19` `07:00:00`, William Hargrove, Margaret Ashford |
-| Three players | `2026-09-15` `08:00:00`, Priya Shah, Robert Vance, Diana Cole |
-| Full (`4/4`) | `2026-09-16` `07:00:00`, William Hargrove, Margaret Ashford, Charles Beaumont, Eleanor Whitfield |
+| Open (`0/4`) | `2026-10-07` `08:00:00`, no bookings |
+| One player | `2026-10-07` `08:30:00`, Thomas Langley |
+| Two players | `2026-10-12` `07:00:00`, William Hargrove, Margaret Ashford |
+| Three players | `2026-10-08` `08:00:00`, Priya Shah, Robert Vance, Diana Cole |
+| Full (`4/4`) | `2026-10-09` `07:00:00`, William Hargrove, Margaret Ashford, Charles Beaumont, Eleanor Whitfield |
 
 | id | Name | Phone |
 |----|------|-------|

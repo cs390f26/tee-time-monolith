@@ -67,7 +67,7 @@ mysql -u tee_time -ptee_time tee_time < scripts/schema.sql
 
 ## Seed
 
-After the tables exist, load `scripts/seed-data.sql` (twelve members, slots for Sep 14–20 2026, and bookings):
+After the tables exist, load `scripts/seed-data.sql` (twelve members, slots for Oct 7–13 2026, and bookings):
 
 ```bash
 mysql -u tee_time -ptee_time tee_time < scripts/seed-data.sql
