@@ -227,7 +227,7 @@ def test_add_player_raises_database_unavailable_when_the_saved_slot_cannot_be_re
     club_storage, monkeypatch
 ):
     club_storage.add_member(member("m1", "Ada"))
-    monkeypatch.setattr(club_storage, "slot_at", lambda day, slot_time: None)
+    monkeypatch.setattr(club_storage, "get_tee_time", lambda day, slot_time: None)
     with pytest.raises(DatabaseUnavailableError):
         club_storage.add_player(DAY, SLOT, player(1, "m1", "Ada"))
 

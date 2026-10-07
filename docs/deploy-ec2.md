@@ -8,6 +8,7 @@ This document explains how to run the tee-time app on an EC2 instance. Gunicorn 
 The script `deploy/userdata.sh` does the instance setup:
 
 * Install necessary packages
+* Set the instance timezone to US Eastern (`America/New_York`) so tee times match the club clock
 * Clone the repo
 * Set up the `.venv` and install the app (`pip install -r requirements.txt` and `pip install -e .`)
 * Write `.env` with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`

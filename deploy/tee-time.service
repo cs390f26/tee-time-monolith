@@ -9,6 +9,7 @@ User=ec2-user
 Group=ec2-user
 WorkingDirectory=/home/ec2-user/tee-time-monolith
 EnvironmentFile=/home/ec2-user/tee-time-monolith/.env
+Environment=TZ=America/New_York
 # Bind to port 80 without running the whole process as root.
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE

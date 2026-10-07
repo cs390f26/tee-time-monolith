@@ -106,15 +106,6 @@ class ClubStorage:
             raise DatabaseUnavailableError("database not reachable") from exc
 
     def list_tee_times(self, day: date) -> list[TeeTimeData]:
-        return self.slots_on_day(day)
-
-    def list_booked(self) -> list[TeeTimeData]:
-        return self.booked_slots()
-
-    def get_tee_time(self, day: date, slot_time: str) -> TeeTimeData | None:
-        return self.slot_at(day, slot_time)
-
-    def slots_on_day(self, day: date) -> list[TeeTimeData]:
         return self._load_tee_times(
             """
             SELECT id, slot_date, slot_time
@@ -125,7 +116,18 @@ class ClubStorage:
             (day.isoformat(),),
         )
 
-    def slot_at(self, day: date, slot_time: str) -> TeeTimeData | None:
+    def list_booked(self) -> list[TeeTimeData]:
+        slots = self._load_tee_times(
+            """
+            SELECT id, slot_date, slot_time
+            FROM tee_times
+            ORDER BY slot_date, slot_time
+            """,
+            (),
+        )
+        return [slot for slot in slots if slot.players]
+
+    def get_tee_time(self, day: date, slot_time: str) -> TeeTimeData | None:
         slots = self._load_tee_times(
             """
             SELECT id, slot_date, slot_time
@@ -137,17 +139,6 @@ class ClubStorage:
         if not slots:
             return None
         return slots[0]
-
-    def booked_slots(self) -> list[TeeTimeData]:
-        slots = self._load_tee_times(
-            """
-            SELECT id, slot_date, slot_time
-            FROM tee_times
-            ORDER BY slot_date, slot_time
-            """,
-            (),
-        )
-        return [slot for slot in slots if slot.players]
 
     def add_player(self, day: date, slot_time: str, player: PlayerData) -> TeeTimeData:
         day_text = day.isoformat()
@@ -173,7 +164,7 @@ class ClubStorage:
             raise DatabaseUnavailableError("database not reachable") from exc
         finally:
             conn.close()
-        updated = self.slot_at(day, hhmm)
+        updated = self.get_tee_time(day, hhmm)
         if updated is None:
             raise DatabaseUnavailableError("database not reachable")
         return updated

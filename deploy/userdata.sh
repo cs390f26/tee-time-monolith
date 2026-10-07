@@ -14,7 +14,11 @@ REPO_URL="https://github.com/cs390f26/tee-time-monolith.git"
 
 APP_DIR=/home/ec2-user/tee-time-monolith
 
-yum install -y python3.12 git mariadb105-server
+yum install -y python3.12 git mariadb105-server tzdata
+
+# Amazon Linux defaults to UTC. Tee times are Eastern clock times, so a 7:00
+# slot must be 7:00am Eastern. 1pm UTC is 9am Eastern.
+timedatectl set-timezone America/New_York
 
 systemctl enable --now mariadb
 
