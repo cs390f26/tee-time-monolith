@@ -33,6 +33,51 @@ When you launch the instance, AWS boots it and then runs the userdata script. Th
 From your own machine, with no SSH session, open `http://<public-ip>/health`. It should return `{"status":"ok"}`.
 
 
+## SSH into the instance
+
+From your own machine, use the private key for the `vockey` key pair (in AWS Academy this is usually `labsuser.pem`). Amazon Linux uses the `ec2-user` account. Replace `<public-ip>` with the instance’s public IPv4 address.
+
+```bash
+chmod 400 labsuser.pem
+ssh -i labsuser.pem ec2-user@<public-ip>
+```
+
+The app lives in `/home/ec2-user/tee-time-monolith`.
+
+## SQL on the instance
+
+MariaDB is already running. Connect with the same account the app uses:
+
+```bash
+mysql -u tee_time -ptee_time tee_time
+```
+
+Useful queries:
+
+```sql
+SHOW TABLES;
+
+SELECT id, name, phone FROM members;
+
+SELECT id, slot_date, slot_time
+FROM tee_times
+ORDER BY slot_date, slot_time;
+
+SELECT t.slot_date, t.slot_time, m.name, b.player_position
+FROM bookings b
+JOIN tee_times t ON t.id = b.tee_time_id
+JOIN members m ON m.id = b.member_id
+ORDER BY t.slot_date, t.slot_time, b.player_position;
+```
+
+Exit the client with `exit`. To wipe and reload the seed data, run this from the app directory. `scripts/schema.sql` drops the tables first.
+
+```bash
+cd /home/ec2-user/tee-time-monolith
+mysql -u tee_time -ptee_time tee_time < scripts/schema.sql
+mysql -u tee_time -ptee_time tee_time < scripts/seed-data.sql
+```
+
 ## Other Useful Commands on the EC2 Instance
 
 - `systemctl status tee-time` — see the status of the Gunicorn process
