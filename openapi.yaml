@@ -17,6 +17,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+              example:
+                status: ok
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /tee-times:
     get:
       summary: Tee times for one day
@@ -75,11 +79,15 @@ paths:
                 $ref: "#/components/schemas/TeeTime"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /reserved:
     get:
       summary: Reserved tee times
       operationId: listReserved
-      description: Booked tee times split into upcoming and past. Empty until storage is wired. Send Accept application/json; a browser request returns the reserved page.
+      description: Booked tee times split into upcoming and past. Send Accept application/json; a browser request returns the reserved page.
       responses:
         "200":
           description: Upcoming and past tee times that have players.
@@ -91,7 +99,7 @@ paths:
     get:
       summary: Members
       operationId: listMembers
-      description: Members sorted by name. Empty until storage is wired. Send Accept application/json; a browser request returns the members page.
+      description: Members sorted by name. Send Accept application/json; a browser request returns the members page.
       responses:
         "200":
           description: The member list.
@@ -134,6 +142,37 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: BAD_REQUEST
+              message: date query parameter is required
+    NotFound:
+      description: The member or the tee time does not exist. Nothing is written.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            member:
+              summary: Unknown member
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: member not found
+            teeTime:
+              summary: Unknown tee time
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: tee time not found
+    ServiceUnavailable:
+      description: The database is not reachable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Health"
+          example:
+            status: unavailable
   schemas:
     Health:
       type: object
