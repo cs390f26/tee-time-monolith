@@ -5,25 +5,17 @@ exceptions so the application layer does not import pymysql.
 """
 
 from contextlib import contextmanager
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 import pymysql
 import pymysql.cursors
 
-from tee_time.store import (
-    DatabaseUnavailableError,
-    MemberAlreadyExistsError,
-    PlayerAlreadyBookedError,
-    PositionTakenError,
-    SlotFullError,
-)
-from tee_time.types import MAX_PLAYERS, MemberData, PlayerData, TeeTimeData
+from tee_time.store import DatabaseUnavailableError, MemberAlreadyExistsError
+from tee_time.types import MemberData, PlayerData, TeeTimeData
 
 _SCHEMA = Path(__file__).resolve().parents[2] / "scripts" / "schema.sql"
 _CONNECT_TIMEOUT = 5
-_DUPLICATE_KEY = 1062
-_CHECK_VIOLATION = {3819, 4025}
 
 
 class ClubStorage:
@@ -143,27 +135,12 @@ class ClubStorage:
     def add_player(self, day: date, slot_time: str, player: PlayerData) -> TeeTimeData:
         day_text = day.isoformat()
         hhmm = hour_and_minute(slot_time)
-        conn = self._connect()
         try:
-            # One transaction so the seat check and the insert cannot interleave.
-            conn.begin()
-            tee_time_id = find_or_create_tee_time(conn, day_text, hhmm)
-            reject_closed_seat(players_for(conn, tee_time_id, lock=True), player)
-            insert_booking(conn, tee_time_id, player)
-            conn.commit()
-        except (SlotFullError, PlayerAlreadyBookedError, PositionTakenError):
-            conn.rollback()
-            raise
-        except pymysql.IntegrityError as exc:
-            conn.rollback()
-            raise storage_error(exc) from exc
+            with self._session() as conn:
+                tee_time_id = find_or_create_tee_time(conn, day_text, hhmm)
+                insert_booking(conn, tee_time_id, player)
         except pymysql.Error as exc:
-            conn.rollback()
-            if is_check_violation(exc):
-                raise PositionTakenError(str(exc)) from exc
             raise DatabaseUnavailableError("database not reachable") from exc
-        finally:
-            conn.close()
         updated = self.get_tee_time(day, hhmm)
         if updated is None:
             raise DatabaseUnavailableError("database not reachable")
@@ -233,21 +210,18 @@ def tee_time_from_row(conn: pymysql.connections.Connection, row: dict) -> TeeTim
     )
 
 
-def players_for(
-    conn: pymysql.connections.Connection,
-    tee_time_id: int,
-    lock: bool = False,
-) -> list[PlayerData]:
-    sql = """
+def players_for(conn: pymysql.connections.Connection, tee_time_id: int) -> list[PlayerData]:
+    rows = fetchall(
+        conn,
+        """
         SELECT b.player_position, b.member_id, m.name
         FROM bookings b
         JOIN members m ON m.id = b.member_id
         WHERE b.tee_time_id = %s
         ORDER BY b.player_position
-    """
-    if lock:
-        sql += " FOR UPDATE"
-    rows = fetchall(conn, sql, (tee_time_id,))
+        """,
+        (tee_time_id,),
+    )
     return [
         PlayerData(
             number=row["player_position"],
@@ -261,45 +235,21 @@ def players_for(
 def find_or_create_tee_time(
     conn: pymysql.connections.Connection, day_text: str, hhmm: str
 ) -> int:
-    row = locked_tee_time(conn, day_text, hhmm)
-    if row is not None:
-        return row["id"]
-    try:
-        return execute(
-            conn,
-            "INSERT INTO tee_times (slot_date, slot_time) VALUES (%s, %s)",
-            (day_text, f"{hhmm}:00"),
-        )
-    except pymysql.IntegrityError as exc:
-        if "uq_slot" not in str(exc):
-            raise
-        row = locked_tee_time(conn, day_text, hhmm)
-        if row is None:
-            raise
-        return row["id"]
-
-
-def locked_tee_time(conn: pymysql.connections.Connection, day_text: str, hhmm: str):
-    return fetchone(
+    row = fetchone(
         conn,
         """
         SELECT id FROM tee_times
         WHERE slot_date = %s AND LEFT(slot_time, 5) = %s
-        FOR UPDATE
         """,
         (day_text, hhmm),
     )
-
-
-def reject_closed_seat(players: list[PlayerData], player: PlayerData) -> None:
-    if len(players) >= MAX_PLAYERS:
-        raise SlotFullError("foursome full")
-    if any(existing.member_id == player.member_id for existing in players):
-        raise PlayerAlreadyBookedError("already booked on this slot")
-    if player.number < 1 or player.number > MAX_PLAYERS:
-        raise PositionTakenError(f"player number {player.number} is not open")
-    if any(existing.number == player.number for existing in players):
-        raise PositionTakenError(f"player number {player.number} is taken")
+    if row is not None:
+        return row["id"]
+    return execute(
+        conn,
+        "INSERT INTO tee_times (slot_date, slot_time) VALUES (%s, %s)",
+        (day_text, f"{hhmm}:00"),
+    )
 
 
 def insert_booking(
@@ -320,45 +270,17 @@ def hour_and_minute(value: str) -> str:
     return value[:5]
 
 
-def as_date_text(value) -> str:
+def as_date_text(value: date) -> str:
     """DATE columns come back as date objects. The app uses YYYY-MM-DD text."""
-    if isinstance(value, datetime):
-        return value.date().isoformat()
-    if isinstance(value, date):
-        return value.isoformat()
-    return str(value)[:10]
+    return value.isoformat()
 
 
-def as_hhmm(value) -> str:
+def as_hhmm(value: timedelta) -> str:
     """TIME columns come back as timedeltas. The app uses HH:MM text."""
-    if isinstance(value, timedelta):
-        total = int(value.total_seconds())
-        hours, rem = divmod(total, 3600)
-        minutes = rem // 60
-        return f"{hours:02d}:{minutes:02d}"
-    if isinstance(value, time):
-        return value.strftime("%H:%M")
-    return str(value)[:5]
-
-
-def storage_error(exc: pymysql.IntegrityError) -> Exception:
-    code = exc.args[0] if exc.args else None
-    message = str(exc)
-    if code in _CHECK_VIOLATION or "chk_player_position" in message:
-        return PositionTakenError(message)
-    if code == _DUPLICATE_KEY:
-        if "uq_booking_member" in message:
-            return PlayerAlreadyBookedError("already booked on this slot")
-        if "uq_booking_position" in message:
-            return PositionTakenError(message)
-        if "PRIMARY" in message:
-            return MemberAlreadyExistsError(message)
-    return DatabaseUnavailableError("database not reachable")
-
-
-def is_check_violation(exc: pymysql.Error) -> bool:
-    code = exc.args[0] if exc.args else None
-    return code in _CHECK_VIOLATION or "chk_player_position" in str(exc)
+    total = int(value.total_seconds())
+    hours, rem = divmod(total, 3600)
+    minutes = rem // 60
+    return f"{hours:02d}:{minutes:02d}"
 
 
 def fetchall(conn: pymysql.connections.Connection, sql: str, params: tuple) -> list:

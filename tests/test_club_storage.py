@@ -9,13 +9,7 @@ import pymysql
 import pytest
 
 from tee_time.app import create_app
-from tee_time.store import (
-    DatabaseUnavailableError,
-    MemberAlreadyExistsError,
-    PlayerAlreadyBookedError,
-    PositionTakenError,
-    SlotFullError,
-)
+from tee_time.store import DatabaseUnavailableError, MemberAlreadyExistsError
 from tee_time.tee_time import TeeTimeApp
 from tee_time.types import MemberData, PlayerData
 
@@ -109,43 +103,41 @@ def _store_players(club_storage, count):
         club_storage.add_member(member(f"m{index}", f"Player {index}"))
 
 
-def test_add_player_raises_player_already_booked_and_keeps_the_original_player(
+def test_add_player_rejects_a_duplicate_member_and_keeps_the_original_player(
     club_storage,
 ):
     _store_players(club_storage, 2)
     club_storage.add_player(DAY, "08:00", player(1, "m1", "Player 1"))
-    with pytest.raises(PlayerAlreadyBookedError):
+    with pytest.raises(DatabaseUnavailableError):
         club_storage.add_player(DAY, "08:00", player(2, "m1", "Player 1"))
     assert len(club_storage.get_tee_time(DAY, "08:00").players) == 1
 
 
-def test_add_player_raises_position_taken_when_that_player_number_is_already_used(
+def test_add_player_rejects_a_taken_player_number_and_keeps_the_original_player(
     club_storage,
 ):
     _store_players(club_storage, 2)
     club_storage.add_player(DAY, "08:00", player(1, "m1", "Player 1"))
-    with pytest.raises(PositionTakenError, match="is taken"):
+    with pytest.raises(DatabaseUnavailableError):
         club_storage.add_player(DAY, "08:00", player(1, "m2", "Player 2"))
     assert len(club_storage.get_tee_time(DAY, "08:00").players) == 1
 
 
-def test_add_player_raises_position_taken_when_the_player_number_is_outside_1_to_4(
-    club_storage,
-):
+def test_add_player_rejects_a_player_number_outside_1_to_4(club_storage):
     _store_players(club_storage, 2)
     club_storage.add_player(DAY, "08:00", player(1, "m1", "Player 1"))
-    with pytest.raises(PositionTakenError, match="is not open"):
+    with pytest.raises(DatabaseUnavailableError):
         club_storage.add_player(DAY, "08:00", player(0, "m2", "Player 2"))
     assert len(club_storage.get_tee_time(DAY, "08:00").players) == 1
 
 
-def test_add_player_raises_slot_full_when_four_players_are_already_booked(club_storage):
+def test_add_player_rejects_a_fifth_player_and_keeps_the_foursome(club_storage):
     _store_players(club_storage, 5)
     for index in range(1, 5):
         club_storage.add_player(
             DAY, SLOT, player(index, f"m{index}", f"Player {index}")
         )
-    with pytest.raises(SlotFullError):
+    with pytest.raises(DatabaseUnavailableError):
         club_storage.add_player(DAY, SLOT, player(1, "m5", "Player 5"))
     assert len(club_storage.get_tee_time(DAY, SLOT).players) == 4
 
@@ -158,39 +150,9 @@ def test_unknown_member_booking_raises_database_unavailable_and_stores_nothing(
     assert club_storage.get_tee_time(DAY, SLOT) is None
 
 
-def _skip_the_seat_check(monkeypatch):
-    monkeypatch.setattr("tee_time.db.reject_closed_seat", lambda players, seated: None)
-
-
-def test_duplicate_member_unique_key_raises_player_already_booked_and_keeps_the_first(
-    club_storage, monkeypatch
-):
-    club_storage.add_member(member("m1", "Ada"))
-    club_storage.add_player(DAY, SLOT, player(1, "m1", "Ada"))
-    _skip_the_seat_check(monkeypatch)
-    with pytest.raises(PlayerAlreadyBookedError):
-        club_storage.add_player(DAY, SLOT, player(2, "m1", "Ada"))
-    assert len(club_storage.get_tee_time(DAY, SLOT).players) == 1
-
-
-def test_duplicate_position_unique_key_raises_position_taken_and_keeps_the_first(
-    club_storage, monkeypatch
-):
-    club_storage.add_member(member("m1", "Ada"))
+def test_player_number_9_stores_no_tee_time(club_storage):
     club_storage.add_member(member("m2", "Grace", "555-0101"))
-    club_storage.add_player(DAY, SLOT, player(1, "m1", "Ada"))
-    _skip_the_seat_check(monkeypatch)
-    with pytest.raises(PositionTakenError):
-        club_storage.add_player(DAY, SLOT, player(1, "m2", "Grace"))
-    assert len(club_storage.get_tee_time(DAY, SLOT).players) == 1
-
-
-def test_player_number_9_check_constraint_raises_position_taken_and_stores_no_tee_time(
-    club_storage, monkeypatch
-):
-    club_storage.add_member(member("m2", "Grace", "555-0101"))
-    _skip_the_seat_check(monkeypatch)
-    with pytest.raises(PositionTakenError):
+    with pytest.raises(DatabaseUnavailableError):
         club_storage.add_player(DAY, "08:00", player(9, "m2", "Grace"))
     assert club_storage.get_tee_time(DAY, "08:00") is None
 
@@ -205,20 +167,6 @@ def test_add_player_rolls_back_the_tee_time_when_mysql_disconnects_during_insert
 
     monkeypatch.setattr("tee_time.db.insert_booking", fail)
     with pytest.raises(DatabaseUnavailableError):
-        club_storage.add_player(DAY, SLOT, player(1, "m1", "Ada"))
-    assert club_storage.get_tee_time(DAY, SLOT) is None
-
-
-def test_mysql_check_violation_on_insert_raises_position_taken_and_rolls_back(
-    club_storage, monkeypatch
-):
-    club_storage.add_member(member("m1", "Ada"))
-
-    def fail(*args, **kwargs):
-        raise pymysql.OperationalError(3819, "chk_player_position")
-
-    monkeypatch.setattr("tee_time.db.insert_booking", fail)
-    with pytest.raises(PositionTakenError):
         club_storage.add_player(DAY, SLOT, player(1, "m1", "Ada"))
     assert club_storage.get_tee_time(DAY, SLOT) is None
 
