@@ -17,15 +17,16 @@ The site lists tee times, books an open slot for a member, and lists and adds me
 ### Happy path
 
 1. Open the times page.
-2. The app loads all tee times.
-3. Each row shows the date, the time, and the status: **open**, or **booked** with the member's name.
-4. Open slots can be selected.
+2. The app shows one week of days. Previous and next move to another week.
+3. Each day is a grid of half-hour cards from 7:00 through 2:30.
+4. Each card shows the time and a 4-dot count of the players on that slot.
+5. A card with fewer than four players, whose start is still ahead, can be selected.
+6. Names show on Book and Reserved.
 
 ### Other outcomes
 
 | Situation | Result |
 |-----------|--------|
-| No tee times | Empty message. This is not an error. |
 | Bad URL | Not-found page. |
 | Database down | Unavailable. An empty list is not shown in place of the failure. |
 
@@ -41,7 +42,7 @@ The site lists tee times, books an open slot for a member, and lists and adds me
 2. Choose a member who is not already on that time.
 3. Confirm **Book**.
 4. The app checks that the slot still has fewer than four players and that the member is not already listed, then appends the member.
-5. The count goes up by one and the name appears. A slot that now has four players is no longer selectable.
+5. The count goes up by one and the name shows on Book and on Reserved. A slot that now has four players is no longer selectable.
 6. A reload still shows the group.
 
 ### Other outcomes
@@ -63,7 +64,7 @@ The site lists tee times, books an open slot for a member, and lists and adds me
 ### Happy path
 
 1. Open the members page.
-2. The list shows each member's name and contact, in a stable order.
+2. The list shows each member's name and phone, in a stable order.
 3. The add-member form is on the same page.
 
 ### Other outcomes
@@ -82,7 +83,7 @@ The site lists tee times, books an open slot for a member, and lists and adds me
 
 ### Happy path
 
-1. Fill in a name and a contact. Contact is an email or a phone; one of them is required.
+1. Fill in a name and a phone. Both are required.
 2. Submit.
 3. The app validates the input, stores the member, and returns an id.
 4. The list updates and the form clears.
@@ -93,9 +94,9 @@ The site lists tee times, books an open slot for a member, and lists and adds me
 | Situation | Result |
 |-----------|--------|
 | Blank or missing name | Nothing written. |
+| Blank or missing phone | Nothing written. |
 | Name too long | Nothing written. |
-| Bad email | Nothing written. |
-| Duplicate email (when email is unique) | Nothing written. |
+| Phone too long | Nothing written. |
 | Database down | 503. The roster is unchanged. |
 
 **After (success):** One new member exists. Tee times are unchanged.
