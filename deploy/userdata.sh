@@ -40,19 +40,11 @@ MYSQL_DATABASE=tee_time
 EOF
 
 # This script runs as root, but the app runs as ec2-user. Change ownership
-# to ec2-user for all files created in the previous steps, then create the
-# database as that user.
+# to ec2-user for all files created in the previous steps. create-db.sql
+# still runs as root; schema and seed data run as the tee_time user.
 chown -R ec2-user:ec2-user "$APP_DIR"
 
-mysql <<'EOF'
-CREATE DATABASE IF NOT EXISTS tee_time;
-CREATE USER IF NOT EXISTS 'tee_time'@'localhost' IDENTIFIED BY 'tee_time';
-CREATE USER IF NOT EXISTS 'tee_time'@'127.0.0.1' IDENTIFIED BY 'tee_time';
-GRANT ALL PRIVILEGES ON tee_time.* TO 'tee_time'@'localhost';
-GRANT ALL PRIVILEGES ON tee_time.* TO 'tee_time'@'127.0.0.1';
-FLUSH PRIVILEGES;
-EOF
-
+mysql < "$APP_DIR/scripts/create-db.sql"
 mysql -u tee_time -ptee_time tee_time < "$APP_DIR/scripts/schema.sql"
 mysql -u tee_time -ptee_time tee_time < "$APP_DIR/scripts/seed-data.sql"
 

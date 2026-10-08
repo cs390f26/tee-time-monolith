@@ -12,7 +12,7 @@ The script `deploy/userdata.sh` does the instance setup:
 * Clone the repo
 * Set up the `.venv` and install the app (`pip install -r requirements.txt` and `pip install -e .`)
 * Write `.env` with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE`
-* Load `scripts/schema.sql` and `scripts/seed-data.sql`
+* Create the database and user with `scripts/create-db.sql`, then load `scripts/schema.sql` and `scripts/seed-data.sql`
 * Install the gunicorn systemd unit
 * Start gunicorn
 
